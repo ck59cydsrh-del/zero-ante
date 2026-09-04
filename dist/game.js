@@ -671,9 +671,11 @@
     }
 
     function card(c, i = 0, back = false) {
-        if (back) return `<i class="card card-back" style="--i:${i}"></i>`;
+        if (back) return `<i class="card card-back back-${i % 4}" style="--i:${i}"><span></span></i>`;
         let hot = c.s === "♥" || c.s === "♦";
-        return `<i class="card ${hot ? "hot" : ""}" style="--i:${i}"><b>${RN[c.r] || c.r}</b><em>${c.s}</em><small>ZA/${i + 1}</small></i>`;
+        let rank = RN[c.r] || c.r;
+        let suit = { "♠": "s", "♥": "h", "♦": "d", "♣": "c" }[c.s];
+        return `<i class="card suit-${suit} ${hot ? "hot" : ""}" style="--i:${i}"><span class="corner top"><b>${rank}</b><em>${c.s}</em></span><strong class="pip" aria-label="${c.s}"></strong><span class="corner bottom"><b>${rank}</b><em>${c.s}</em></span></i>`;
     }
 
     function render(show = false) {
@@ -694,7 +696,7 @@
         }
         $("#seats").innerHTML = P.map(
             (p, i) =>
-            `<article class="h-seat pos-${i} ${i === actor && phase === "act" ? "acting" : ""} ${p.folded ? "folded" : ""} ${show && !p.folded ? "showing" : ""}"><div class="avatar">${i + 1}</div><header><b>${p.name}</b><span>${i === dealer ? "D " : ""}${i === sb ? "SB " : ""}${i === bb ? "BB" : ""}</span></header><strong>${p.chips}</strong><small>${p.last}</small><div class="seat-mods">${p.mods.map((m) => `<i class="${m.cat}" title="${m.name}">${m.icon}</i>`).join("")}</div><div class="tiny-cards">${show && !p.folded ? p.hole.map((c, j) => card(c, j)).join("") : p.hole.map((_, j) => card(null, j, true)).join("")}</div></article>`,
+            `<article class="h-seat pos-${i} ${i === actor && phase === "act" ? "acting" : ""} ${p.folded ? "folded" : ""} ${show && !p.folded ? "showing" : ""}"><div class="avatar">${i + 1}</div><header><b>${p.name}</b><span>${i === dealer ? "D " : ""}${i === sb ? "SB " : ""}${i === bb ? "BB" : ""}</span></header><div class="seat-bank"><span class="mini-chip chip-c${i % 4}"></span><strong>${p.chips}</strong></div><small>${p.last}</small><div class="seat-mods">${p.mods.map((m) => `<i class="${m.cat}" title="${m.name}">${m.icon}</i>`).join("")}</div><div class="tiny-cards">${show && !p.folded ? p.hole.map((c, j) => card(c, j)).join("") : p.hole.map((_, j) => card(null, j, true)).join("")}</div></article>`,
         ).join("");
         const actionPlayer = P[actor] || P[0];
         const viewer = mode === "solo" ? P[0] : actionPlayer;

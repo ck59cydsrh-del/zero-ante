@@ -10,7 +10,7 @@
     <meta property="og:description" content="TDA準拠のポーカーと、判断を拡張するローグライク・モジュール。">
     <meta property="og:image" content="https://odd-even-rogue-duel.yuhgamiya.chatgpt.site/og.png">
     <title>ZERO//ANTE — TOURNAMENT HOLD'EM</title>
-    <link rel="stylesheet" href="style.css?v=9">
+    <link rel="stylesheet" href="style.css?v=11">
 </head>
 
 <body>
@@ -41,7 +41,7 @@
                     <div class="decision"><small>CURRENT HAND</small><b id="hand-name">—</b><span id="module-readout">NO MODULE DATA</span></div>
                 </div>
                 <div class="stack-strip">
-                    <div class="my-stack"><span class="chip-orb"></span><small>MY STACK</small><strong id="viewer-chips">1,000</strong></div>
+                    <div class="my-stack"><span class="chip-pile hero"><i></i><i></i><i></i></span><small>MY STACK</small><strong id="viewer-chips">1,000</strong></div>
                     <div><small>TO CALL</small><b id="to-call">0</b></div>
                     <div><small>TABLE POT</small><b id="pot-mini">0</b></div>
                     <div><small>POSITION</small><b id="position">—</b></div>
@@ -51,7 +51,7 @@
                 </div>
             </div>
             <div id="setup" class="modal setup"><span class="eyebrow">TDA CORE / TABLE SETUP</span>
-                <h1>TOURNAMENT<br>HOLD'EM</h1>
+                <h1>ZERO//ANTE<span>ROGUE HOLD'EM</span></h1>
                 <div class="setup-grid"><label>PLAY MODE<select id="mode">
                             <option value="solo">1 PLAYER + CPU</option>
                             <option value="local">LOCAL PLAYERS</option>
@@ -95,7 +95,7 @@
             <p><b class="chaos-key">CHAOS</b>6枚目の場札など、その試合だけルールを改変。</p>
         </div><small>2024 Poker TDA rules used as procedural reference. Rogue modules are explicit game variants and are announced before they resolve.</small>
     </dialog>
-    <script src="game.js?v=9"></script>
+    <script src="game.js?v=11"></script>
 </body>
 
 </html>
