@@ -1,86 +1,50 @@
 (() => {
-  const $ = (s) => document.querySelector(s);
-  const boardEl=$('#board'), intro=$('#intro'), draft=$('#draft'), result=$('#result');
-  const SIZE=7;
-  let mode='cpu', playing=false, drafting=false, board=[], selected=null, valid=[], turn='white', ap=2, floor=1, deadline=0, offers=[];
-  const player={white:{wins:0,scrap:0,rules:[],shield:false},black:{wins:0,scrap:0,rules:[],shield:false}};
-  const names={core:'C',blade:'B',wisp:'W'};
-
-  const upgrades=[
-    {id:'stride',icon:'↔',name:'LONG STEP',desc:'WISP may move up to 2 tiles',apply:p=>p.rules.push('LONG STEP')},
-    {id:'slash',icon:'×',name:'CROSS CUT',desc:'BLADE gains orthogonal movement',apply:p=>p.rules.push('CROSS CUT')},
-    {id:'ghost',icon:'□',name:'GHOST PATH',desc:'WISP may pass through one ally',apply:p=>p.rules.push('GHOST PATH')},
-    {id:'crown',icon:'◇',name:'CROWN WALK',desc:'CORE may move up to 2 tiles',apply:p=>p.rules.push('CROWN WALK')},
-    {id:'guard',icon:'▣',name:'NULL SHELL',desc:'First capture is cancelled each floor',apply:p=>{p.rules.push('NULL SHELL');p.shield=true}},
-    {id:'tempo',icon:'++',name:'EXTRA CYCLE',desc:'Gain 3 actions on your next turn',apply:p=>{p.rules.push('EXTRA CYCLE');p.bonus=true}}
+  const $=s=>document.querySelector(s), SUITS=['♠','♥','♦','♣'], RANKS=[2,3,4,5,6,7,8,9,10,11,12,13,14], RN={11:'J',12:'Q',13:'K',14:'A'};
+  let phase='idle',ante=1,lives=3,pWins=0,dWins=0,total=0,hand=[],dealerPool=[],selected=new Set(),relics=[],offers=[],deadline=0;
+  const relicDefs=[
+    {id:'heart',icon:'♥×2',name:'HEART ENGINE',desc:'Each heart adds +18 POWER',bonus:(cards)=>cards.filter(c=>c.suit==='♥').length*18},
+    {id:'ace',icon:'A+',name:'ACE CACHE',desc:'Each ace adds +35 POWER',bonus:(cards)=>cards.filter(c=>c.rank===14).length*35},
+    {id:'pair',icon:'22',name:'PAIR PRESS',desc:'Pair and Two Pair gain +80 POWER',bonus:(_,e)=>['PAIR','TWO PAIR'].includes(e.name)?80:0},
+    {id:'straight',icon:'→5',name:'LINE DRIVER',desc:'Straight hands gain +140 POWER',bonus:(_,e)=>e.name.includes('STRAIGHT')?140:0},
+    {id:'flush',icon:'●5',name:'INK FLUSH',desc:'Flush hands gain +150 POWER',bonus:(_,e)=>e.name.includes('FLUSH')?150:0},
+    {id:'low',icon:'2—6',name:'LOW VOLTAGE',desc:'Cards 2–6 add +14 POWER each',bonus:(cards)=>cards.filter(c=>c.rank<=6).length*14},
+    {id:'wide',icon:'+1',name:'WIDE DRAW',desc:'Draw one additional card each hand',effect:'wide'},
+    {id:'crown',icon:'JQK',name:'COURT TAX',desc:'Face cards add +16 POWER each',bonus:(cards)=>cards.filter(c=>c.rank>=11&&c.rank<=13).length*16}
   ];
-
-  function piece(type,side,x,y){return {id:crypto.randomUUID?.()||Math.random(),type,side,x,y}}
-  function setupBoard(){
-    board=[];
-    [['wisp','black',1,0],['blade','black',2,0],['core','black',3,0],['blade','black',4,0],['wisp','black',5,0],['wisp','white',1,6],['blade','white',2,6],['core','white',3,6],['blade','white',4,6],['wisp','white',5,6]].forEach(v=>board.push(piece(...v)));
-    selected=null;valid=[];turn=floor%2?'white':'black';ap=2;player.white.shield=player.white.rules.includes('NULL SHELL');player.black.shield=player.black.rules.includes('NULL SHELL');render();
-    if(mode==='cpu'&&turn==='black')setTimeout(cpuTurn,550);
+  const makeDeck=()=>SUITS.flatMap(suit=>RANKS.map(rank=>({suit,rank,id:`${suit}${rank}`})));
+  function shuffle(a){for(let i=a.length-1;i;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+  function combos(a,k){const out=[];function go(start,p){if(p.length===k){out.push(p);return}for(let i=start;i<=a.length-(k-p.length);i++)go(i+1,[...p,a[i]])}go(0,[]);return out}
+  function evaluate(cards){
+    const rs=cards.map(c=>c.rank).sort((a,b)=>b-a),counts={};rs.forEach(r=>counts[r]=(counts[r]||0)+1);const groups=Object.entries(counts).map(([r,n])=>({r:+r,n})).sort((a,b)=>b.n-a.n||b.r-a.r);const flush=cards.every(c=>c.suit===cards[0].suit);let uniq=[...new Set(rs)];if(uniq[0]===14)uniq.push(1);let highStraight=0;for(let i=0;i<=uniq.length-5;i++)if(uniq[i]-uniq[i+4]===4)highStraight=Math.max(highStraight,uniq[i]);const straight=!!highStraight;
+    let cat=0,name='HIGH CARD';if(groups[0].n===2){cat=1;name='PAIR'}if(groups[0].n===2&&groups[1]?.n===2){cat=2;name='TWO PAIR'}if(groups[0].n===3){cat=3;name='THREE'}if(straight){cat=4;name='STRAIGHT'}if(flush){cat=5;name='FLUSH'}if(groups[0].n===3&&groups[1]?.n===2){cat=6;name='FULL HOUSE'}if(groups[0].n===4){cat=7;name='FOUR'}if(straight&&flush){cat=8;name=highStraight===14?'ROYAL FLUSH':'STRAIGHT FLUSH'}
+    const tie=groups.flatMap(g=>Array(g.n).fill(g.r)).reduce((n,r)=>n*15+r,0);return {cat,name,base:cat*180+rs.reduce((a,r)=>a+r,0)+Math.floor(tie/100000)};
   }
-  const at=(x,y)=>board.find(p=>p.x===x&&p.y===y);
-  const inside=(x,y)=>x>=0&&x<SIZE&&y>=0&&y<SIZE;
-  const has=(side,rule)=>player[side].rules.includes(rule);
+  function power(cards,isPlayer=true){const e=evaluate(cards);let value=e.base;if(isPlayer)relics.forEach(r=>value+=r.bonus?r.bonus(cards,e):0);return {...e,power:value}}
+  function best(pool,isPlayer=false){return combos(pool,5).map(cards=>({cards,...power(cards,isPlayer)})).sort((a,b)=>b.power-a.power)[0]}
 
-  function getMoves(p){
-    let vectors=[];
-    if(p.type==='core'){const d=has(p.side,'CROWN WALK')?2:1;for(let r=1;r<=d;r++)vectors.push([r,0],[-r,0],[0,r],[0,-r],[r,r],[r,-r],[-r,r],[-r,-r]);}
-    if(p.type==='blade'){vectors=[[1,1],[1,-1],[-1,1],[-1,-1]];if(has(p.side,'CROSS CUT'))vectors.push([1,0],[-1,0],[0,1],[0,-1]);}
-    if(p.type==='wisp'){const d=has(p.side,'LONG STEP')?2:1;for(let r=1;r<=d;r++)vectors.push([r,0],[-r,0],[0,r],[0,-r]);}
-    return vectors.map(([dx,dy])=>({x:p.x+dx,y:p.y+dy})).filter(m=>{
-      if(!inside(m.x,m.y))return false;const target=at(m.x,m.y);if(target?.side===p.side)return false;
-      const dist=Math.max(Math.abs(m.x-p.x),Math.abs(m.y-p.y));if(dist>1){const mx=p.x+Math.sign(m.x-p.x),my=p.y+Math.sign(m.y-p.y),block=at(mx,my);if(block&&!(p.type==='wisp'&&has(p.side,'GHOST PATH')&&block.side===p.side))return false;}
-      return true;
-    });
+  function deal(){
+    phase='select';selected.clear();const deck=shuffle(makeDeck()),draw=8+(relics.some(r=>r.effect==='wide')?1:0);hand=deck.splice(0,draw);dealerPool=deck.splice(0,Math.min(7+ante,11));$('#dealer-rank').textContent='HIDDEN';$('#round-result').textContent='SELECT YOUR HAND';$('#phase-label').textContent='SELECT 5 CARDS';$('#play-hand').textContent='PLAY HAND ';$('#play-hand').insertAdjacentHTML('beforeend','<kbd>ENTER</kbd>');renderCards();update();message('NEW CARDS RECEIVED');
   }
-
-  function clickTile(x,y){
-    if(!playing||drafting||(mode==='cpu'&&turn==='black'))return;
-    const target=at(x,y);
-    if(selected&&valid.some(m=>m.x===x&&m.y===y)){move(selected,x,y);return;}
-    if(target?.side===turn){selected=target;valid=getMoves(target);message(`${target.type.toUpperCase()} SELECTED`);}else{selected=null;valid=[];message('INVALID SIGNAL');}
-    render();
+  function toggleCard(i){if(phase!=='select')return;if(selected.has(i))selected.delete(i);else if(selected.size<5)selected.add(i);renderCards();update()}
+  function play(){if(phase==='reveal'){deal();return}if(phase!=='select'||selected.size!==5)return;phase='reveal';const mine=[...selected].sort((a,b)=>a-b).map(i=>hand[i]),me=power(mine,true),dealer=best(dealerPool,false);total+=me.power;const win=me.power>dealer.power,tie=me.power===dealer.power;if(win)pWins++;else if(!tie)dWins++;$('#hand-rank').textContent=me.name;$('#hand-power').textContent=`${String(me.power).padStart(3,'0')} PWR`;$('#dealer-rank').textContent=`${dealer.name} / ${dealer.power}`;$('#round-result').textContent=tie?'PUSH':win?'YOU WIN':'HOUSE WINS';$('#phase-label').textContent='HAND RESOLVED';renderCards(dealer.cards);message(tie?'POWER COLLISION':win?'PAYOUT ACCEPTED':'SIGNAL REJECTED');update();
+    if(pWins>=2||dWins>=2){setTimeout(resolveBlind,850)}else{$('#play-hand').disabled=false;$('#play-hand').textContent='NEXT HAND ';$('#play-hand').insertAdjacentHTML('beforeend','<kbd>ENTER</kbd>')}
   }
+  function resolveBlind(){if(pWins>=2){if(ante>=5){finish(true);return}phase='draft';beginDraft()}else{lives--;if(lives<=0){finish(false);return}pWins=dWins=0;phase='select';message('INTEGRITY LOST / RETRY BLIND');setTimeout(deal,700)}update()}
+  function beginDraft(){offers=[...relicDefs].filter(r=>!relics.some(x=>x.id===r.id)).sort(()=>Math.random()-.5).slice(0,3);$('#relic-cards').innerHTML=offers.map((r,i)=>`<button class="relic-card" data-i="${i}"><span>RELIC_0${i+1}</span><i>${r.icon}</i><h3>${r.name}</h3><p>${r.desc}</p></button>`).join('');$('#relic-cards').querySelectorAll('button').forEach(b=>b.onclick=()=>chooseRelic(+b.dataset.i));deadline=performance.now()+12000;$('#draft').classList.remove('hidden')}
+  function chooseRelic(i){if(phase!=='draft'||!offers[i])return;relics.push(offers[i]);ante++;pWins=dWins=0;$('#draft').classList.add('hidden');message(`${offers[i].name} INSTALLED`);deal()}
+  function finish(win){phase='ended';$('#result-label').textContent=win?'RUN COMPLETE':'RUN TERMINATED';$('#result-title').textContent=win?'HOUSE BROKEN':'NO CREDIT';$('#result-copy').textContent=`ANTE ${String(ante).padStart(2,'0')} / ${relics.length} RELICS / ${total} TOTAL POWER`;$('#result').classList.remove('hidden');update()}
+  function start(){phase='select';$('#intro').classList.add('hidden');$('#result').classList.add('hidden');deal()}
+  function reset(){ante=1;lives=3;pWins=dWins=0;total=0;hand=[];dealerPool=[];selected.clear();relics=[];offers=[];phase='idle';$('#result').classList.add('hidden');$('#draft').classList.add('hidden');$('#intro').classList.remove('hidden');renderCards();update()}
 
-  function move(p,x,y){
-    const target=at(x,y);let captured=false;
-    if(target){
-      if(player[target.side].shield){player[target.side].shield=false;message('NULL SHELL / CAPTURE CANCELLED');endAction();return;}
-      board=board.filter(q=>q!==target);captured=true;player[p.side].scrap++;
-      if(target.type==='core'){p.x=x;p.y=y;render();setTimeout(()=>winFloor(p.side),260);return;}
-    }
-    p.x=x;p.y=y;selected=null;valid=[];message(captured?'PIECE EXTRACTED':'MOVE ACCEPTED');render();
-    if(captured&&player[p.side].scrap>=2){player[p.side].scrap-=2;beginDraft(p.side);return;}
-    endAction();
+  function cardHTML(c,i,selectable=false){const red=c.suit==='♥'||c.suit==='♦';return `<${selectable?'button':'div'} class="playing-card ${red?'red':''} ${selected.has(i)?'selected':''}" ${selectable?`data-i="${i}" aria-pressed="${selected.has(i)}"`:''}><span class="rank">${RN[c.rank]||c.rank}</span><span class="suit">${c.suit}</span><span class="serial">${String(i+1).padStart(2,'0')}</span></${selectable?'button':'div'}>`}
+  function renderCards(revealed=null){$('#player-cards').innerHTML=hand.length?hand.map((c,i)=>cardHTML(c,i,true)).join(''):Array(8).fill('<div class="playing-card back"></div>').join('');$('#player-cards').querySelectorAll('button').forEach(b=>b.onclick=()=>toggleCard(+b.dataset.i));$('#dealer-cards').innerHTML=revealed?revealed.map((c,i)=>cardHTML(c,i)).join(''):Array(5).fill('<div class="playing-card back"></div>').join('')}
+  function update(){
+    $('#ante-label').textContent=`ANTE_${String(ante).padStart(2,'0')} / 05`;$('#select-count').textContent=`${selected.size} / 5`;$('#play-hand').disabled=phase==='select'?selected.size!==5:phase!=='reveal';$('#player-wins').textContent=pWins;$('#dealer-wins').textContent=dWins;document.querySelectorAll('#player-pips i').forEach((e,i)=>e.classList.toggle('on',i<pWins));document.querySelectorAll('#dealer-pips i').forEach((e,i)=>e.classList.toggle('on',i<dWins));$('#life-text').textContent=`${lives} / 3`;document.querySelectorAll('#lives i').forEach((e,i)=>e.classList.toggle('off',i>=lives));$('#total-power').textContent=String(total).padStart(5,'0');$('#relic-list').innerHTML=relics.length?relics.map(r=>`<li>${r.name}<b>${r.icon}</b></li>`).join(''):'<li class="empty">NO RELICS FOUND</li>';
+    if(phase==='select'&&selected.size===5){const e=power([...selected].map(i=>hand[i]),true);$('#hand-rank').textContent=e.name;$('#hand-power').textContent=`${String(e.power).padStart(3,'0')} PWR`}else if(phase==='select'){$('#hand-rank').textContent='—';$('#hand-power').textContent='000 PWR'}
   }
-
-  function endAction(){selected=null;valid=[];ap--;render();if(ap<=0){turn=turn==='white'?'black':'white';ap=player[turn].bonus?3:2;player[turn].bonus=false;message(`${turn.toUpperCase()} SIGNAL`);render();if(mode==='cpu'&&turn==='black')setTimeout(cpuTurn,500);}}
-  function allCpuMoves(){return board.filter(p=>p.side==='black').flatMap(p=>getMoves(p).map(m=>({p,m,target:at(m.x,m.y)})));}
-  function cpuTurn(){if(!playing||drafting||turn!=='black')return;const moves=allCpuMoves();if(!moves.length){turn='white';ap=2;render();return;}moves.sort((a,b)=>scoreMove(b)-scoreMove(a));const top=moves.slice(0,Math.min(3,moves.length));const pick=top[Math.floor(Math.random()*top.length)];move(pick.p,pick.m.x,pick.m.y);if(playing&&!drafting&&turn==='black')setTimeout(cpuTurn,480);}
-  function scoreMove(m){let s=Math.random()*2;if(m.target?.type==='core')s+=100;if(m.target)s+=12;const wc=board.find(p=>p.side==='white'&&p.type==='core');s+=7-Math.abs(m.m.x-wc.x)-Math.abs(m.m.y-wc.y);return s;}
-
-  function beginDraft(side){drafting=true;$('#draft-player').textContent=`${side.toUpperCase()} / MUTATE`;offers=[...upgrades].sort(()=>Math.random()-.5).slice(0,3);$('#cards').innerHTML=offers.map((u,i)=>`<button class="card" data-i="${i}"><span>RULE_0${i+1}</span><i>${u.icon}</i><h3>${u.name}</h3><p>${u.desc}</p></button>`).join('');$('#cards').querySelectorAll('.card').forEach(b=>b.onclick=()=>choose(+b.dataset.i,side));draft.classList.remove('hidden');deadline=performance.now()+12000;if(mode==='cpu'&&side==='black')setTimeout(()=>drafting&&choose(Math.floor(Math.random()*3),side),700);}
-  function choose(i,side){if(!drafting||!offers[i])return;upgrades.find(u=>u.id===offers[i].id).apply(player[side]);drafting=false;draft.classList.add('hidden');message(`${offers[i].name} INSTALLED`);render();endAction();}
-
-  function winFloor(side){playing=false;player[side].wins++;message(`${side.toUpperCase()} CAPTURED CORE`);render();if(player[side].wins>=2){setTimeout(()=>finish(side),450);return;}floor++;setTimeout(()=>{setupBoard();playing=true;},850);}
-  function finish(side){result.classList.remove('hidden');$('#winner').textContent=`${side.toUpperCase()} WINS`;$('#result-copy').textContent=`${floor} FLOORS / ${player[side].rules.length} MUTATIONS / RUN COMPLETE`;}
-  function resetRun(){Object.assign(player.white,{wins:0,scrap:0,rules:[],shield:false});Object.assign(player.black,{wins:0,scrap:0,rules:[],shield:false});floor=1;playing=false;drafting=false;result.classList.add('hidden');intro.classList.remove('hidden');setupBoard();}
-  function start(){intro.classList.add('hidden');result.classList.add('hidden');playing=true;setupBoard();message('WHITE SIGNAL');}
-
-  function render(){
-    boardEl.innerHTML='';for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){const b=document.createElement('button'),p=at(x,y);b.className=`tile ${(x+y)%2?'dark':''}`;b.dataset.x=x;b.dataset.y=y;b.setAttribute('role','gridcell');b.setAttribute('aria-label',`${String.fromCharCode(65+x)}${y+1}${p?` ${p.side} ${p.type}`:''}`);if(selected?.x===x&&selected?.y===y)b.classList.add('selected');if(valid.some(m=>m.x===x&&m.y===y))b.classList.add(p?'capture':'valid');if(p){const e=document.createElement('span');e.className=`piece ${p.side} ${p.type}${player[p.side].shield&&p.type==='core'?' shielded':''}`;e.innerHTML=p.type==='core'?`<b>${names[p.type]}</b>`:names[p.type];b.appendChild(e)}b.onclick=()=>clickTile(x,y);boardEl.appendChild(b)}
-    $('#turn-name').textContent=turn.toUpperCase();$('#turn-value').classList.toggle('black',turn==='black');$('#ap-1').classList.toggle('used',ap<1);$('#ap-2').classList.toggle('used',ap<2);$('#floor-label').textContent=`FLOOR ${String(floor).padStart(2,'0')} / 03`;$('#scrap-count').textContent=`${player[turn].scrap} / 2`;document.querySelectorAll('.scrap-meter i').forEach((e,i)=>e.classList.toggle('on',i<player[turn].scrap));
-    $('#white-rules').innerHTML=player.white.rules.length?player.white.rules.map(r=>`<li>${r}</li>`).join(''):'<li>STANDARD SET</li>';$('#black-rules').innerHTML=player.black.rules.length?player.black.rules.map(r=>`<li>${r}</li>`).join(''):'<li>STANDARD SET</li>';document.querySelectorAll('#white-wins i').forEach((e,i)=>e.classList.toggle('won',i<player.white.wins));document.querySelectorAll('#black-wins i').forEach((e,i)=>e.classList.toggle('won',i<player.black.wins));
-  }
-  function message(t){$('#message').textContent=t;}
-  function tick(t){if(drafting){const s=Math.max(0,Math.ceil((deadline-t)/1000));$('#draft-timer').textContent=s;if(s===0)choose(0,turn)}requestAnimationFrame(tick)}
-
-  $('#start-button').onclick=start;$('#restart-button').onclick=resetRun;document.querySelectorAll('.mode').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('.mode').forEach(x=>x.classList.toggle('active',x===b));$('#black-type').textContent=mode==='cpu'?'AUTOMATON':'PLAYER_02';resetRun()});
-  const manual=$('#manual');$('#help').onclick=()=>manual.showModal();manual.querySelector('.close').onclick=()=>manual.close();addEventListener('keydown',e=>{if(e.key===' '&&!playing){e.preventDefault();start()}if(e.key.toLowerCase()==='r'&&!result.classList.contains('hidden'))resetRun();if(drafting&&['1','2','3'].includes(e.key))choose(+e.key-1,turn)});
-  if(document.modelContext?.registerTool){try{void Promise.resolve(document.modelContext.registerTool({name:'start_rogue_board',title:'Start rogue board',description:'Start a new NULL//CROWN board-game run in CPU or local two-player mode.',inputSchema:{type:'object',properties:{mode:{type:'string',enum:['cpu','local']}},required:['mode'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute(input){if(!input||!['cpu','local'].includes(input.mode))throw new Error('mode must be cpu or local');mode=input.mode;document.querySelectorAll('.mode').forEach(x=>x.classList.toggle('active',x.dataset.mode===mode));resetRun();start();return{status:'running',mode,boardSize:'7x7',targetFloorWins:2}}})).catch(()=>{})}catch(_){}}
-  resetRun();requestAnimationFrame(tick);
+  function message(t){$('#message').textContent=t}
+  function tick(t){if(phase==='draft'){const s=Math.max(0,Math.ceil((deadline-t)/1000));$('#draft-time').textContent=s;if(s===0)chooseRelic(0)}requestAnimationFrame(tick)}
+  $('#start-button').onclick=start;$('#play-hand').onclick=play;$('#restart-button').onclick=reset;const manual=$('#manual');$('#help').onclick=()=>manual.showModal();manual.querySelector('.close').onclick=()=>manual.close();addEventListener('keydown',e=>{if(e.key===' '&&phase==='idle'){e.preventDefault();start()}if(e.key==='Enter'&&!$('#play-hand').disabled)play();if(e.key.toLowerCase()==='r'&&phase==='ended')reset();if(phase==='draft'&&['1','2','3'].includes(e.key))chooseRelic(+e.key-1)});
+  if(document.modelContext?.registerTool){try{void Promise.resolve(document.modelContext.registerTool({name:'start_rogue_poker_run',title:'Start rogue poker run',description:'Start a new ZERO//ANTE rogue poker run and deal the first hand.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute(){reset();start();return{status:'selecting',ante,drawCount:hand.length,requiredSelection:5,lives}}})).catch(()=>{})}catch(_){}}
+  reset();requestAnimationFrame(tick);
 })();
