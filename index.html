@@ -10,7 +10,7 @@
     <meta property="og:description" content="TDA準拠のポーカーと、判断を拡張するローグライク・モジュール。">
     <meta property="og:image" content="https://odd-even-rogue-duel.yuhgamiya.chatgpt.site/og.png">
     <title>ZERO//ANTE — TOURNAMENT HOLD'EM</title>
-    <link rel="stylesheet" href="style.css?v=8">
+    <link rel="stylesheet" href="style.css?v=9">
 </head>
 
 <body>
@@ -25,6 +25,7 @@
             <div class="genre-key"><span class="info">INFO</span><span class="attack">ATTACK</span><span class="guard">GUARD</span><span class="chaos-key">CHAOS</span></div>
             <aside class="action-feed"><b>LIVE FEED</b><div id="action-log"><span>テーブルを準備中...</span></div></aside>
             <div id="event-fx" class="event-fx hidden" aria-live="assertive"><small id="event-type">SYSTEM</small><strong id="event-title">ROUND START</strong><span id="event-copy"></span></div>
+            <div id="action-pop" class="action-pop hidden" aria-live="polite"><small id="action-player">PLAYER_01</small><strong id="action-name">CHECK</strong></div>
             <div id="seats" class="seats"></div>
             <div class="holdem-center">
                 <div class="pot-box"><small>TOTAL POT</small><strong id="pot">0000</strong><span id="blinds">SB 10 / BB 20 / BBA 20</span></div>
@@ -38,6 +39,12 @@
                 <div class="hole-wrap">
                     <div id="hole" class="hand hole"></div>
                     <div class="decision"><small>CURRENT HAND</small><b id="hand-name">—</b><span id="module-readout">NO MODULE DATA</span></div>
+                </div>
+                <div class="stack-strip">
+                    <div class="my-stack"><span class="chip-orb"></span><small>MY STACK</small><strong id="viewer-chips">1,000</strong></div>
+                    <div><small>TO CALL</small><b id="to-call">0</b></div>
+                    <div><small>TABLE POT</small><b id="pot-mini">0</b></div>
+                    <div><small>POSITION</small><b id="position">—</b></div>
                 </div>
                 <div class="bet-controls"><button id="fold" class="dark">FOLD</button><button id="checkcall">CHECK</button>
                     <div class="raise-control"><button id="minus">−</button><b id="raise-value">40</b><button id="plus">＋</button></div><button id="raise">RAISE TO</button><button id="allin" class="red">ALL-IN</button>
@@ -88,7 +95,7 @@
             <p><b class="chaos-key">CHAOS</b>6枚目の場札など、その試合だけルールを改変。</p>
         </div><small>2024 Poker TDA rules used as procedural reference. Rogue modules are explicit game variants and are announced before they resolve.</small>
     </dialog>
-    <script src="game.js?v=8"></script>
+    <script src="game.js?v=9"></script>
 </body>
 
 </html>

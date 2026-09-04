@@ -41,7 +41,8 @@
         lastBoardKey = null,
         logs = [],
         fxQueue = [],
-        fxBusy = false;
+        fxBusy = false,
+        actionPopTimer = 0;
     const mods = [{
             id: "odds",
             icon: "%POT",
@@ -277,9 +278,23 @@
         }, item.duration);
     }
 
+    function flashAction(title, player, kind = "action") {
+        const el = $("#action-pop");
+        clearTimeout(actionPopTimer);
+        $("#action-player").textContent = player;
+        $("#action-name").textContent = title;
+        el.className = `action-pop ${kind}`;
+        requestAnimationFrame(() => el.classList.add("show"));
+        actionPopTimer = setTimeout(() => {
+            el.classList.remove("show");
+            setTimeout(() => el.classList.add("hidden"), 320);
+        }, 900);
+    }
+
     function init() {
         mode = $("#mode").value;
         N = +$("#count").value;
+        document.body.dataset.players = String(N);
         P = Array.from({
             length: N
         }, (_, i) => ({
@@ -467,7 +482,7 @@
         pending.delete(p.id);
         const kind = type === "raise" || type === "allin" ? "attack" : "action";
         pushLog(`${p.name} / ${p.last}`, kind);
-        announce("PLAYER ACTION", p.last, p.name, kind, 850);
+        flashAction(p.last, p.name, kind);
         phase = "transition";
         render();
         setTimeout(() => {
@@ -707,6 +722,18 @@
             `CALL ${Math.min(due, actionPlayer.chips)}` :
             "CHECK";
         $("#raise-value").textContent = raiseTo;
+        const stackEl = $("#viewer-chips");
+        const nextStack = (viewer?.chips || 0).toLocaleString("ja-JP");
+        if (stackEl.textContent !== nextStack) {
+            stackEl.textContent = nextStack;
+            stackEl.classList.remove("bump");
+            requestAnimationFrame(() => stackEl.classList.add("bump"));
+        }
+        $("#to-call").textContent = canAct ?
+            Math.min(due, actionPlayer?.chips || 0).toLocaleString("ja-JP") :
+            "—";
+        $("#pot-mini").textContent = pot().toLocaleString("ja-JP");
+        $("#position").textContent = viewer?.id === dealer ? "DEALER" : viewer?.id === sb ? "SB" : viewer?.id === bb ? "BB" : "—";
         ["fold", "checkcall", "raise", "allin", "minus", "plus"].forEach(
             (id) => ($("#" + id).disabled = !canAct),
         );
