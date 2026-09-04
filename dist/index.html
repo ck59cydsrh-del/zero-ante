@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#efeee8" />
+  <meta name="description" content="捕獲でルールが変異する、1bitローグ・ボードゲーム。" />
+  <meta property="og:title" content="NULL//CROWN — 1BIT ROGUE BOARD" />
+  <meta property="og:description" content="駒を取る。法則を変える。COREを奪う。" />
+  <meta property="og:image" content="https://odd-even-rogue-duel.yuhgamiya.chatgpt.site/og.png" />
+  <title>NULL//CROWN — 1BIT ROGUE BOARD</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="machine">
+    <header class="masthead">
+      <a href="#" class="logo" aria-label="NULL CROWN home">NULL<span>//</span>CROWN</a>
+      <p>1BIT ROGUE BOARD / TWO PLAYER</p>
+      <div class="mode-switch" role="group" aria-label="対戦モード">
+        <button class="mode active" data-mode="cpu">CPU</button><button class="mode" data-mode="local">2P</button>
+      </div>
+    </header>
+    <section class="layout">
+      <div class="board-section">
+        <div class="section-head"><span>GRID_07×07</span><span id="floor-label">FLOOR 01 / 03</span></div>
+        <div class="board-frame">
+          <div class="coordinates top"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span></div>
+          <div id="board" class="board" role="grid" aria-label="対戦ボード"></div>
+          <div class="coordinates side"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span></div>
+          <div id="intro" class="overlay intro">
+            <div class="eyebrow">BOOT SEQUENCE_01</div><h1>駒を取るたび、<br>法則が壊れる。</h1>
+            <p>2アクションで駒を進め、敵のCOREを奪取せよ。捕獲した断片から新しい移動法則をインストールする。</p>
+            <button id="start-button" class="big-button">START RUN <kbd>SPACE</kbd></button>
+          </div>
+          <div id="draft" class="overlay draft hidden" aria-live="polite">
+            <div class="draft-top"><div><span id="draft-player" class="eyebrow">WHITE / MUTATE</span><h2>法則を選択</h2></div><b id="draft-timer">12</b></div>
+            <div id="cards" class="cards"></div>
+          </div>
+          <div id="result" class="overlay result hidden">
+            <div class="eyebrow">RUN TERMINATED</div><h2 id="winner">WHITE WINS</h2><p id="result-copy"></p>
+            <button id="restart-button" class="big-button">NEW RUN <kbd>R</kbd></button>
+          </div>
+        </div>
+        <div class="ticker"><span>SELECT PIECE → SELECT TILE</span><span id="message">AWAITING INPUT</span></div>
+      </div>
+      <aside class="panel">
+        <div class="section-head"><span>RUN_DATA</span><span class="blink">● LIVE</span></div>
+        <section class="turn-box"><div class="turn-label">CURRENT SIGNAL</div><div id="turn-value" class="turn-value"><span></span><b id="turn-name">WHITE</b><em><i id="ap-1"></i><i id="ap-2"></i></em></div></section>
+        <section class="core-status">
+          <div class="status-row white"><div><small>PLAYER_01</small><strong>WHITE</strong></div><div class="floor-pips" id="white-wins"><i></i><i></i></div></div>
+          <div class="versus">CAPTURE CORE / BEST OF 3</div>
+          <div class="status-row black"><div><small id="black-type">AUTOMATON</small><strong>BLACK</strong></div><div class="floor-pips" id="black-wins"><i></i><i></i></div></div>
+        </section>
+        <section class="scrap-box"><header><span>SCRAP / MUTATION</span><b id="scrap-count">0 / 2</b></header><div class="scrap-meter"><i></i><i></i></div><p>敵駒を2体捕獲すると、移動ルールを1つ追加。</p></section>
+        <section class="rules"><header><span>INSTALLED RULES</span><button id="help" aria-label="遊び方">?</button></header><div class="rule-columns"><div><b>WHT</b><ol id="white-rules"><li>STANDARD SET</li></ol></div><div><b>BLK</b><ol id="black-rules"><li>STANDARD SET</li></ol></div></div></section>
+        <footer><span>NC–0703</span><span>NO CLOUD / NO SAVE</span></footer>
+      </aside>
+    </section>
+  </main>
+  <dialog id="manual"><button class="close" aria-label="閉じる">×</button><div class="eyebrow">FIELD MANUAL_01</div><h2>COREを奪え。</h2><div class="manual-grid"><div><span class="piece white core"><b>C</b></span><p><b>CORE</b> 全方向へ1マス。奪われるとそのフロアを失う。</p></div><div><span class="piece white blade">B</span><p><b>BLADE</b> 斜めへ1マス。敵駒を切り取る主力。</p></div><div><span class="piece white wisp">W</span><p><b>WISP</b> 縦横へ1マス。壁役と経路づくり。</p></div></div><p class="manual-note">1ターン2アクション。同じ駒を2回動かしてもよい。捕獲2回ごとに3択改造。先に2フロア取れば勝利。</p></dialog>
+  <script src="game.js"></script>
+</body>
+</html>
