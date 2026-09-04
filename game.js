@@ -38,32 +38,80 @@
         deadline = 0,
         mainWinner = null,
         lastHoleKey = null,
-        lastBoardKey = null;
+        lastBoardKey = null,
+        logs = [],
+        fxQueue = [],
+        fxBusy = false;
     const mods = [{
             id: "odds",
             icon: "%POT",
             name: "POT CALC",
             desc: "コール額とポットから必要勝率を表示。",
+            cat: "info",
         },
         {
             id: "scan",
             icon: "5/7",
             name: "HAND SCAN",
             desc: "現在できている最強の役を常時表示。",
+            cat: "info",
         },
         {
             id: "tell",
             icon: "CPU?",
             name: "TELL TAP",
             desc: "CPUのアクション強度を解析表示。",
+            cat: "info",
         },
         {
-            id: "map",
-            icon: "BB→",
-            name: "LEVEL MAP",
-            desc: "次のブラインドレベルを先読み表示。",
+            id: "scramble",
+            icon: "RIP",
+            name: "CARD SCRAMBLE",
+            desc: "各ハンド開始時、次のCPUの高い方のカードを強制交換。",
+            cat: "attack",
+        },
+        {
+            id: "silence",
+            icon: "NO↑",
+            name: "RAISE JAMMER",
+            desc: "次のCPUはプリフロップでレイズ不能。",
+            cat: "attack",
+        },
+        {
+            id: "rebuy",
+            icon: "+100",
+            name: "LIFE PATCH",
+            desc: "200チップ未満になった時、一度だけ100チップ回復。",
+            cat: "guard",
+        },
+        {
+            id: "insurance",
+            icon: "1BB",
+            name: "FOLD SHIELD",
+            desc: "各ハンド最初のフォールド時、1BBを回収。",
+            cat: "guard",
+        },
+        {
+            id: "redline",
+            icon: "RED+",
+            name: "RED OVERCLOCK",
+            desc: "ショーダウンで♥・♦の数字を1つ上として判定。",
+            cat: "chaos",
+        },
+        {
+            id: "sixboard",
+            icon: "BOARD6",
+            name: "SIXTH STREET",
+            desc: "リバーにコミュニティカードを2枚公開。最強の5枚を選ぶ。",
+            cat: "chaos",
         },
     ];
+    const CAT = {
+        info: "INFO / 情報",
+        attack: "ATTACK / 妨害",
+        guard: "GUARD / 防御",
+        chaos: "CHAOS / 改変",
+    };
     const active = () => P.filter((p) => p.chips > 0),
         live = () => P.filter((p) => !p.folded),
         next = (i, filter = (p) => p.chips > 0) => {
@@ -185,6 +233,50 @@
             .at(-1);
     }
 
+    function handRank(p) {
+        let cards = [...p.hole, ...board];
+        if (p.mods.some((m) => m.id === "redline")) {
+            cards = cards.map((c) =>
+                c.s === "♥" || c.s === "♦" ? { ...c, r: Math.min(14, c.r + 1) } : c,
+            );
+        }
+        return best7(cards);
+    }
+
+    function pushLog(copy, kind = "system") {
+        logs.unshift({ copy, kind });
+        logs = logs.slice(0, 6);
+        const el = $("#action-log");
+        if (el) el.innerHTML = logs.map((x) => `<span class="${x.kind}">${x.copy}</span>`).join("");
+    }
+
+    function announce(type, title, copy, kind = "system", duration = 1450) {
+        fxQueue.push({ type, title, copy, kind, duration });
+        if (!fxBusy) playNextFx();
+    }
+
+    function playNextFx() {
+        const item = fxQueue.shift();
+        if (!item) {
+            fxBusy = false;
+            return;
+        }
+        fxBusy = true;
+        const el = $("#event-fx");
+        el.className = `event-fx ${item.kind}`;
+        $("#event-type").textContent = item.type;
+        $("#event-title").textContent = item.title;
+        $("#event-copy").textContent = item.copy;
+        setTimeout(() => {
+            el.classList.add("out");
+            setTimeout(() => {
+                el.className = "event-fx hidden";
+                fxBusy = false;
+                playNextFx();
+            }, 220);
+        }, item.duration);
+    }
+
     function init() {
         mode = $("#mode").value;
         N = +$("#count").value;
@@ -202,10 +294,16 @@
             hole: [],
             mods: [],
             last: "READY",
+            silenced: false,
+            shieldUsed: false,
+            rebuyUsed: false,
         }));
         $("#setup").classList.add("hidden");
         handNo = 0;
         dealer = -1;
+        logs = [];
+        pushLog("TOURNAMENT START", "system");
+        announce("SYSTEM", "TABLE OPEN", `${N}人テーブル / 能力ドラフト有効`, "system", 1700);
         newHand();
     }
 
@@ -224,6 +322,30 @@
         p.total += x;
         if (!p.chips) p.allin = true;
         return x;
+    }
+
+    function applyOpeningModules() {
+        P.forEach((owner) => {
+            if (owner.folded) return;
+            if (owner.mods.some((m) => m.id === "rebuy") && owner.chips < 200 && !owner.rebuyUsed) {
+                owner.chips += 100;
+                owner.rebuyUsed = true;
+                pushLog(`${owner.name} LIFE PATCH +100`, "guard");
+                announce("GUARD TRIGGER", "LIFE PATCH", `${owner.name}が100チップ回復`, "guard");
+            }
+            const target = P.find((p) => !p.folded && !p.human && p.id !== owner.id);
+            if (target && owner.mods.some((m) => m.id === "scramble")) {
+                const hi = target.hole[0].r >= target.hole[1].r ? 0 : 1;
+                target.hole[hi] = deck.pop();
+                pushLog(`${owner.name} → ${target.name} CARD SCRAMBLE`, "attack");
+                announce("ATTACK TRIGGER", "CARD SCRAMBLE", `${target.name}の高いカードを強制交換`, "attack");
+            }
+            if (target && owner.mods.some((m) => m.id === "silence")) {
+                target.silenced = true;
+                pushLog(`${target.name} RAISE LOCKED`, "attack");
+                announce("JAMMING", "RAISE LOCK", `${target.name}はプリフロップでレイズ不能`, "attack");
+            }
+        });
     }
 
     function newHand() {
@@ -245,12 +367,15 @@
             p.bet = p.total = 0;
             p.folded = p.chips <= 0;
             p.allin = false;
+            p.silenced = false;
+            p.shieldUsed = false;
             p.hole = p.folded ? [] : [deck.pop(), deck.pop()];
             p.last = p.folded ? "OUT" : "IN";
         });
         if (active().length >= 3) payAnte(P[bb], B);
         pay(P[sb], S);
         pay(P[bb], B);
+        applyOpeningModules();
         street = "pre";
         currentBet = P[bb].bet;
         minRaise = B;
@@ -262,6 +387,8 @@
         );
         actor = next(bb, (p) => pending.has(p.id));
         phase = "act";
+        pushLog(`HAND ${handNo} / PRE-FLOP`, "street");
+        announce(`HAND ${String(handNo).padStart(2, "0")}`, "PRE-FLOP", "ホールカード2枚を配布", "street", 1500);
         showActor(true);
         render();
     }
@@ -275,7 +402,7 @@
         if (!p.human) {
             phase = "cpu";
             render();
-            setTimeout(cpu, 420);
+            setTimeout(cpu, 900);
             return;
         }
         if (mode === "local" && !first) {
@@ -296,6 +423,15 @@
         if (type === "fold") {
             p.folded = true;
             p.last = "FOLD";
+            if (p.mods.some((m) => m.id === "insurance") && !p.shieldUsed) {
+                const refund = Math.min(LEVELS[level][1], p.total);
+                p.chips += refund;
+                p.total -= refund;
+                p.bet = Math.max(0, p.bet - refund);
+                p.shieldUsed = true;
+                pushLog(`${p.name} FOLD SHIELD +${refund}`, "guard");
+                announce("GUARD TRIGGER", "FOLD SHIELD", `${refund}チップを緊急回収`, "guard");
+            }
         } else if (type === "check" || type === "call") {
             pay(p, due);
             p.last = due ? "CALL" : "CHECK";
@@ -329,23 +465,32 @@
             );
         }
         pending.delete(p.id);
-        if (live().length === 1) {
-            awardUncontested(live()[0]);
-            return;
-        }
-        if (!pending.size) {
-            advance();
-            return;
-        }
-        actor = next(actor, (x) => pending.has(x.id));
-        raiseTo = currentBet + minRaise;
-        showActor();
+        const kind = type === "raise" || type === "allin" ? "attack" : "action";
+        pushLog(`${p.name} / ${p.last}`, kind);
+        announce("PLAYER ACTION", p.last, p.name, kind, 850);
+        phase = "transition";
         render();
+        setTimeout(() => {
+            if (live().length === 1) {
+                awardUncontested(live()[0]);
+                return;
+            }
+            if (!pending.size) {
+                advance();
+                return;
+            }
+            actor = next(actor, (x) => pending.has(x.id));
+            raiseTo = currentBet + minRaise;
+            showActor();
+        }, 720);
     }
 
     function advance() {
         if (street === "river") {
-            showdown();
+            phase = "transition";
+            render();
+            announce("BETTING CLOSED", "SHOWDOWN", "全員のホールカードを公開", "street", 1200);
+            setTimeout(showdown, 1050);
             return;
         }
         P.forEach((p) => (p.bet = 0));
@@ -362,6 +507,11 @@
         } else if (street === "turn") {
             deck.pop();
             board.push(deck.pop());
+            if (live().some((p) => p.mods.some((m) => m.id === "sixboard"))) {
+                board.push(deck.pop());
+                pushLog("SIXTH STREET / BOARD +1", "chaos");
+                announce("RULE OVERRIDE", "SIXTH STREET", "リバーを2枚公開。8枚から最強の5枚を選択", "chaos", 1800);
+            }
             street = "river";
         }
         pending = new Set(
@@ -370,17 +520,24 @@
             .map((p) => p.id),
         );
         if (pending.size <= 1 && live().every((p) => p.allin || p.folded)) {
-            while (board.length < 5) {
+            const targetBoard = live().some((p) => p.mods.some((m) => m.id === "sixboard")) ? 6 : 5;
+            while (board.length < targetBoard) {
                 deck.pop();
                 board.push(deck.pop());
             }
-            showdown();
+            phase = "transition";
+            render();
+            announce("ALL-IN RUNOUT", "NO MORE BETS", "残りのカードを自動公開", "attack", 1500);
+            setTimeout(showdown, 1300);
             return;
         }
         actor = next(dealer, (p) => pending.has(p.id));
         raiseTo = minRaise;
-        showActor(true);
+        phase = "transition";
         render();
+        pushLog(`${street.toUpperCase()} OPEN`, "street");
+        announce("STREET OPEN", street.toUpperCase(), `${board.length}枚のコミュニティカードを公開中`, "street", 1350);
+        setTimeout(() => showActor(true), 1150);
     }
 
     function cpu() {
@@ -388,12 +545,12 @@
             due = Math.max(0, currentBet - p.bet),
             strength =
             board.length >= 3 ?
-            best7([...p.hole, ...board]).cat :
+            handRank(p).cat :
             Math.max(...p.hole.map((c) => c.r)) / 14,
             roll = Math.random();
         p.tell = strength > 4 ? "STRONG" : strength > 1 ? "MIXED" : "WEAK";
         if (due > p.chips * 0.45 && strength < 2) act("fold");
-        else if (strength >= 4 && roll > 0.45) {
+        else if (!p.silenced && strength >= 4 && roll > 0.45) {
             raiseTo = currentBet + minRaise * (1 + Math.floor(Math.random() * 3));
             act("raise");
         } else act(due ? "call" : "check");
@@ -407,7 +564,7 @@
         street = "showdown";
         phase = "showdown";
         let eligible = live();
-        eligible.forEach((p) => (p.rank = best7([...p.hole, ...board])));
+        eligible.forEach((p) => (p.rank = handRank(p)));
         let levels = [...new Set(P.map((p) => p.total).filter(Boolean))].sort(
                 (a, b) => a - b,
             ),
@@ -431,16 +588,21 @@
         mainWinner = main[0];
         P.forEach((p) => (p.last = p.folded ? "FOLD" : p.rank.name));
         render(true);
-        setTimeout(() => afterHand(main), 1000);
+        const names = main.map((p) => p.name).join(" + ");
+        pushLog(`${names} WIN / ${main[0].rank.name}`, "win");
+        announce("POT AWARDED", main[0].rank.name, `${names} +${pot()}`, "win", 2200);
+        setTimeout(() => afterHand(main), 2400);
     }
 
     function awardUncontested(p) {
         p.chips += pot();
         p.last = "POT WON";
         mainWinner = p;
-        phase = "showdown";
+        phase = "won";
         render();
-        setTimeout(() => afterHand([p]), 700);
+        pushLog(`${p.name} UNCONTESTED WIN`, "win");
+        announce("ALL OTHERS FOLDED", "POT CAPTURED", `${p.name}がポットを獲得`, "win", 1700);
+        setTimeout(() => afterHand([p]), 1850);
     }
 
     function afterHand(w) {
@@ -461,21 +623,27 @@
         $("#relic-cards").innerHTML = offers
             .map(
                 (m, i) =>
-                `<button data-i="${i}"><span>LEGAL INFO_0${i + 1}</span><i>${m.icon}</i><h3>${m.name}</h3><p>${m.desc}</p></button>`,
+                `<button data-i="${i}" class="mod-${m.cat}"><span>${CAT[m.cat]}</span><i>${m.icon}</i><h3>${m.name}</h3><p>${m.desc}</p><em>SELECT MODULE_0${i + 1}</em></button>`,
             )
             .join("");
         $("#relic-cards")
             .querySelectorAll("button")
             .forEach((b) => (b.onclick = () => choose(p, +b.dataset.i)));
         $("#relic").classList.remove("hidden");
-        deadline = performance.now() + 12000;
+        deadline = performance.now() + 18000;
+        announce("ROGUE REWARD", "MODULE DRAFT", "勝者は能力を1つインストール", "win", 1800);
     }
 
     function choose(p, i) {
         if (!offers[i]) return;
-        p.mods.push(offers[i]);
+        const picked = offers[i];
+        p.mods.push({ ...picked });
         $("#relic").classList.add("hidden");
-        newHand();
+        phase = "transition";
+        pushLog(`${p.name} INSTALL ${picked.name}`, picked.cat);
+        announce(CAT[picked.cat], picked.name, picked.desc, picked.cat, 2000);
+        render();
+        setTimeout(newHand, 2100);
     }
 
     function finish(p) {
@@ -503,7 +671,7 @@
         if (boardKey !== lastBoardKey) {
             $("#board").innerHTML =
                 board.map((c, i) => card(c, i)).join("") +
-                Array(5 - board.length)
+                Array(Math.max(0, (live().some((p) => p.mods.some((m) => m.id === "sixboard")) ? 6 : 5) - board.length))
                 .fill(0)
                 .map((_, i) => card(null, i, true))
                 .join("");
@@ -511,7 +679,7 @@
         }
         $("#seats").innerHTML = P.map(
             (p, i) =>
-            `<article class="h-seat pos-${i} ${i === actor && phase === "act" ? "acting" : ""} ${p.folded ? "folded" : ""} ${show && !p.folded ? "showing" : ""}"><div class="avatar">${i + 1}</div><header><b>${p.name}</b><span>${i === dealer ? "D " : ""}${i === sb ? "SB " : ""}${i === bb ? "BB" : ""}</span></header><strong>${p.chips}</strong><small>${p.last}</small><div class="tiny-cards">${show && !p.folded ? p.hole.map((c, j) => card(c, j)).join("") : p.hole.map((_, j) => card(null, j, true)).join("")}</div></article>`,
+            `<article class="h-seat pos-${i} ${i === actor && phase === "act" ? "acting" : ""} ${p.folded ? "folded" : ""} ${show && !p.folded ? "showing" : ""}"><div class="avatar">${i + 1}</div><header><b>${p.name}</b><span>${i === dealer ? "D " : ""}${i === sb ? "SB " : ""}${i === bb ? "BB" : ""}</span></header><strong>${p.chips}</strong><small>${p.last}</small><div class="seat-mods">${p.mods.map((m) => `<i class="${m.cat}" title="${m.name}">${m.icon}</i>`).join("")}</div><div class="tiny-cards">${show && !p.folded ? p.hole.map((c, j) => card(c, j)).join("") : p.hole.map((_, j) => card(null, j, true)).join("")}</div></article>`,
         ).join("");
         const actionPlayer = P[actor] || P[0];
         const viewer = mode === "solo" ? P[0] : actionPlayer;
@@ -529,6 +697,10 @@
         $("#active-name").textContent = `${viewer?.name || "TABLE"} / YOUR CARDS`;
         $("#turn-info").textContent = phase === "showdown" ?
             "CARDS REVEALED" :
+            phase === "won" ?
+            "HAND WON" :
+            phase === "transition" ?
+            "RESOLVING..." :
             `${actionPlayer?.name || "TABLE"} TO ACT`;
         let due = Math.max(0, currentBet - (actionPlayer?.bet || 0));
         $("#checkcall").textContent = due ?
@@ -540,7 +712,7 @@
         );
         let rank =
             (phase === "showdown" || viewer?.mods.some((m) => m.id === "scan")) && board.length >= 3 ?
-            best7([...viewer.hole, ...board]).name :
+            handRank(viewer).name :
             "—";
         $("#hand-name").textContent = rank;
         let data = [];
@@ -556,12 +728,17 @@
             data.push(`NEXT ${LEVELS[level + 1][0]}/${LEVELS[level + 1][1]}`);
         $("#module-readout").textContent =
             data.filter(Boolean).join(" / ") || "NO MODULE DATA";
+        $("#module-tray").innerHTML = viewer?.mods.length ?
+            viewer.mods.map((m) => `<span class="mod-chip ${m.cat}"><b>${m.icon}</b>${m.name}</span>`).join("") :
+            `<span class="empty">MODULE SLOT / EMPTY — ハンド勝利で獲得</span>`;
         ["pre", "flop", "turn", "river"].forEach((s) =>
             $("#s-" + s)?.classList.toggle("on", street === s),
         );
         $("#table-msg").textContent =
             street === "showdown" ?
             "SHOWDOWN" :
+            phase === "won" ?
+            "POT CAPTURED" :
             `${street.toUpperCase()} / ${actionPlayer?.name || ""} TO ACT`;
         $("#message").textContent =
             phase === "pass" ?
@@ -570,6 +747,10 @@
             "CPU THINKING" :
             phase === "showdown" ?
             "HAND COMPLETE" :
+            phase === "won" ?
+            "HAND COMPLETE" :
+            phase === "transition" ?
+            "RESOLVING EFFECTS" :
             "ACTION REQUIRED";
         const guide = $("#guidance");
         if (phase === "cpu") {
@@ -580,6 +761,10 @@
                 `<b>YOUR TURN</b><span>無料でCHECKできます。攻めるならRAISEを選んでください。</span>`;
         } else if (street === "showdown") {
             guide.innerHTML = `<b>SHOWDOWN</b><span>全員のカードを公開し、場の5枚と合わせた最強役を判定中です。</span>`;
+        } else if (phase === "won") {
+            guide.innerHTML = `<b>POT WON</b><span>全員がフォールド。カードを見せずにポットを獲得しました。</span>`;
+        } else if (phase === "transition") {
+            guide.innerHTML = `<b>RESOLVE</b><span>アクションと能力効果を処理中。中央の演出とLIVE FEEDを確認してください。</span>`;
         } else {
             guide.innerHTML = `<b>${street.toUpperCase()}</b><span>赤い♥・♦と黒い♠・♣を使い、7枚から最強の5枚を作ります。</span>`;
         }

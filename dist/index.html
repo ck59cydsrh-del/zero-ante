@@ -10,7 +10,7 @@
     <meta property="og:description" content="TDA準拠のポーカーと、判断を拡張するローグライク・モジュール。">
     <meta property="og:image" content="https://odd-even-rogue-duel.yuhgamiya.chatgpt.site/og.png">
     <title>ZERO//ANTE — TOURNAMENT HOLD'EM</title>
-    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="stylesheet" href="style.css?v=8">
 </head>
 
 <body>
@@ -22,6 +22,9 @@
         </header>
         <section class="game">
             <div class="table-noise"></div>
+            <div class="genre-key"><span class="info">INFO</span><span class="attack">ATTACK</span><span class="guard">GUARD</span><span class="chaos-key">CHAOS</span></div>
+            <aside class="action-feed"><b>LIVE FEED</b><div id="action-log"><span>テーブルを準備中...</span></div></aside>
+            <div id="event-fx" class="event-fx hidden" aria-live="assertive"><small id="event-type">SYSTEM</small><strong id="event-title">ROUND START</strong><span id="event-copy"></span></div>
             <div id="seats" class="seats"></div>
             <div class="holdem-center">
                 <div class="pot-box"><small>TOTAL POT</small><strong id="pot">0000</strong><span id="blinds">SB 10 / BB 20 / BBA 20</span></div>
@@ -31,6 +34,7 @@
             <div class="active-pod holdem-pod">
                 <div class="active-meta"><span id="active-name">PLAYER_01</span><b id="turn-info">TO ACT</b></div>
                 <div id="guidance" class="guidance"><b>01</b><span>テーブルを開くと、ここにあなたの2枚が表向きで表示されます。</span></div>
+                <div id="module-tray" class="module-tray"><span class="empty">MODULE SLOT / EMPTY</span></div>
                 <div class="hole-wrap">
                     <div id="hole" class="hand hole"></div>
                     <div class="decision"><small>CURRENT HAND</small><b id="hand-name">—</b><span id="module-readout">NO MODULE DATA</span></div>
@@ -52,7 +56,7 @@
                             <option>6</option>
                         </select></label></div>
                 <div class="quick-guide"><span><b>1</b> 自分だけが見る2枚</span><span><b>2</b> CHECK / CALL / RAISE</span><span><b>3</b> 場の5枚と合わせる</span><span><b>4</b> 最強の5枚で勝負</span></div>
-                <p>各プレイヤー1,000チップ。ノーリミット、ビッグブラインドアンティ、3ハンドごとにブラインドアップ。最初は2人戦がおすすめです。</p><button id="start">ゲームを始める <kbd>SPACE</kbd></button>
+                <p>各プレイヤー1,000チップ。勝つたびに能力を獲得。情報・妨害・防御・ルール改変が次のハンドから自動発動します。</p><button id="start">ゲームを始める <kbd>SPACE</kbd></button>
             </div>
             <div id="pass" class="modal pass hidden"><span class="eyebrow">ONE PLAYER TO A HAND</span>
                 <h2 id="pass-title">PASS TO PLAYER 02</h2>
@@ -79,9 +83,12 @@
             <p><b>DEAL</b>各2枚のホールカードと、全員共通の5枚のコミュニティカード。</p>
             <p><b>BET</b>プリフロップ、フロップ、ターン、リバーでチェック／コール／レイズ／フォールド。</p>
             <p><b>WIN</b>7枚から最強の5枚を作る。同順位はポットを分割し、スートで優劣を付けない。</p>
-        </div><small>2024 Poker TDA rules used as procedural reference. Game-specific automated rulings are handled by the table.</small>
+            <p><b class="info">INFO</b>確率・役・CPU傾向など判断材料を追加。</p>
+            <p><b class="attack">ATTACK</b>カード交換やレイズ封印で相手を妨害。</p>
+            <p><b class="chaos-key">CHAOS</b>6枚目の場札など、その試合だけルールを改変。</p>
+        </div><small>2024 Poker TDA rules used as procedural reference. Rogue modules are explicit game variants and are announced before they resolve.</small>
     </dialog>
-    <script src="game.js?v=7"></script>
+    <script src="game.js?v=8"></script>
 </body>
 
 </html>
