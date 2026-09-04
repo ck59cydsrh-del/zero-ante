@@ -1,94 +1,15 @@
-<!doctype html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="theme-color" content="#ecebe4" />
-  <meta name="description" content="役を作り、ルールを拾い、ディーラーを壊す。1bitローグライク・ポーカー。" />
-  <meta property="og:title" content="ZERO//ANTE — ROGUE POKER" />
-  <meta property="og:description" content="5枚を選べ。勝つたびルールを増やせ。" />
-  <meta property="og:image" content="https://odd-even-rogue-duel.yuhgamiya.chatgpt.site/og.png" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="ZERO//ANTE — ROGUE POKER" />
-  <meta name="twitter:description" content="5枚を選べ。勝つたびルールを増やせ。" />
-  <meta name="twitter:image" content="https://odd-even-rogue-duel.yuhgamiya.chatgpt.site/og.png" />
-  <title>ZERO//ANTE — ROGUE POKER</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <main class="machine">
-    <header class="masthead">
-      <a class="logo" href="#" aria-label="ZERO ANTE home">ZERO<span>//</span>ANTE</a>
-      <p>ROGUE POKER SYSTEM / SINGLE RUN</p>
-      <div class="run-id"><span>RUN</span><b id="run-id">0001</b></div>
-    </header>
-
-    <section class="layout">
-      <div class="table-section">
-        <div class="section-head"><span id="ante-label">ANTE_01 / 05</span><span id="phase-label">SELECT 5 CARDS</span></div>
-        <div class="table">
-          <div class="dealer-zone">
-            <div class="zone-label"><span>DEALER_HAND</span><b id="dealer-rank">HIDDEN</b></div>
-            <div id="dealer-cards" class="card-row dealer-row" aria-label="ディーラーの手札"></div>
-          </div>
-
-          <div class="versus-line"><span></span><b id="round-result">NO SIGNAL</b><span></span></div>
-
-          <div class="player-zone">
-            <div class="zone-label"><span>YOUR_DRAW / CHOOSE EXACTLY FIVE</span><b id="select-count">0 / 5</b></div>
-            <div id="player-cards" class="card-row player-row" aria-label="プレイヤーの手札"></div>
-          </div>
-
-          <div class="action-rail">
-            <div class="hand-readout"><small>HAND VALUE</small><strong id="hand-rank">—</strong><span id="hand-power">000 PWR</span></div>
-            <button id="play-hand" class="main-button" disabled>PLAY HAND <kbd>ENTER</kbd></button>
-          </div>
-
-          <div id="intro" class="overlay intro">
-            <div class="eyebrow">BOOT / HOUSE PROTOCOL</div>
-            <h1>役を作る。<br>ルールを拾う。</h1>
-            <p>8枚から5枚を選んでディーラーと勝負。アンティを破るたび、得点法を変えるRELICを1つ獲得する。</p>
-            <button id="start-button" class="main-button">DEAL FIRST HAND <kbd>SPACE</kbd></button>
-          </div>
-
-          <div id="draft" class="overlay draft hidden" aria-live="polite">
-            <div class="draft-title"><div><span class="eyebrow">BLIND CLEARED</span><h2>RELICを選択</h2></div><b id="draft-time">12</b></div>
-            <div id="relic-cards" class="relic-cards"></div>
-          </div>
-
-          <div id="result" class="overlay result hidden">
-            <div class="eyebrow" id="result-label">RUN COMPLETE</div><h2 id="result-title">HOUSE BROKEN</h2><p id="result-copy"></p>
-            <button id="restart-button" class="main-button">NEW RUN <kbd>R</kbd></button>
-          </div>
-        </div>
-        <div class="ticker"><span>CLICK CARD TO SELECT / CLICK AGAIN TO RETURN</span><span id="message">WAITING FOR DEAL</span></div>
-      </div>
-
-      <aside class="panel">
-        <div class="section-head"><span>RUN_DATA</span><span class="blink">● ACTIVE</span></div>
-        <section class="blind-box">
-          <header><span>BLIND SCORE</span><b>FIRST TO 2</b></header>
-          <div class="score-row"><span>YOU</span><div id="player-pips"><i></i><i></i></div><strong id="player-wins">0</strong></div>
-          <div class="score-row invert"><span>HOUSE</span><div id="dealer-pips"><i></i><i></i></div><strong id="dealer-wins">0</strong></div>
-        </section>
-        <section class="life-box">
-          <header><span>RUN INTEGRITY</span><b id="life-text">3 / 3</b></header><div id="lives" class="lives"><i>♥</i><i>♥</i><i>♥</i></div>
-        </section>
-        <section class="relic-box">
-          <header><span>INSTALLED RELICS</span><button id="help" aria-label="遊び方">?</button></header>
-          <ol id="relic-list"><li class="empty">NO RELICS FOUND</li></ol>
-        </section>
-        <section class="payout-box"><span>TOTAL OUTPUT</span><strong id="total-power">00000</strong><small>POWER UNITS</small></section>
-        <footer><span>ZA–05</span><span>DECK / 52</span></footer>
-      </aside>
-    </section>
-  </main>
-
-  <dialog id="manual">
-    <button class="close" aria-label="閉じる">×</button><span class="eyebrow">FIELD MANUAL_01</span><h2>8枚から、5枚を選ぶ。</h2>
-    <div class="manual-grid"><div><b>01 / DEAL</b><p>配られた8枚から5枚だけを選択。選んだカードの役とPOWERが表示される。</p></div><div><b>02 / BLIND</b><p>ディーラーより高いPOWERを出す。2勝すると次のアンティへ。2敗するとライフを1つ失う。</p></div><div><b>03 / RELIC</b><p>アンティ突破ごとに得点法を1つ改造。5アンティ突破でラン勝利。</p></div></div>
-    <p class="rank-line">ROYAL &gt; STRAIGHT FLUSH &gt; FOUR &gt; FULL HOUSE &gt; FLUSH &gt; STRAIGHT &gt; THREE &gt; TWO PAIR &gt; PAIR &gt; HIGH</p>
-  </dialog>
-  <script src="game.js"></script>
-</body>
-</html>
+<!doctype html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><meta name="theme-color" content="#12130f"><meta name="description" content="1人＋CPUまたは4人ローカルで遊ぶ、1bitローグライク・ポーカー。"><meta property="og:title" content="ZERO//ANTE — CHAOS POKER"><meta property="og:description" content="基本はポーカー。毎アンティ、世界のルールが壊れる。"><meta property="og:image" content="https://odd-even-rogue-duel.yuhgamiya.chatgpt.site/og.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="ZERO//ANTE — CHAOS POKER"><meta name="twitter:description" content="基本はポーカー。毎アンティ、世界のルールが壊れる。"><meta name="twitter:image" content="https://odd-even-rogue-duel.yuhgamiya.chatgpt.site/og.png"><title>ZERO//ANTE — CHAOS POKER</title><link rel="stylesheet" href="style.css"></head>
+<body><div class="rotate"><b>↻</b><span>横向きにしてください</span><small>LANDSCAPE MODE REQUIRED</small></div><main class="console">
+<header><a href="#" class="logo">ZERO<span>//</span>ANTE</a><div class="mode"><button data-mode="solo" class="active">1P + CPU</button><button data-mode="local">4P LOCAL</button></div><div class="run"><span>CHAOS</span><b id="chaos-count">00</b></div></header>
+<section class="game"><div class="table-noise"></div>
+  <div class="seat seat-top" data-seat="2"><div class="badge">P3</div><div><b id="name-2">CPU_03</b><span id="state-2">WAITING</span></div><div class="crowns" id="crowns-2">◇◇◇◇◇</div><div class="mini-hand" id="mini-2"></div></div>
+  <div class="seat seat-left" data-seat="1"><div class="badge">P2</div><div><b id="name-1">CPU_02</b><span id="state-1">WAITING</span></div><div class="crowns" id="crowns-1">◇◇◇◇◇</div><div class="mini-hand" id="mini-1"></div></div>
+  <div class="seat seat-right" data-seat="3"><div class="badge">P4</div><div><b id="name-3">CPU_04</b><span id="state-3">WAITING</span></div><div class="crowns" id="crowns-3">◇◇◇◇◇</div><div class="mini-hand" id="mini-3"></div></div>
+  <div class="center-unit"><div class="screen"><small>HOUSE TERMINAL</small><strong id="screen-main">ANTE 01</strong><span id="screen-sub">SELECT FIVE</span></div><div id="glitch" class="glitch">STANDARD POKER</div></div>
+  <div class="active-pod"><div class="active-meta"><span id="active-name">PLAYER_01 / YOUR HAND</span><b id="pick-count">0 / 5</b></div><div id="hand" class="hand"></div><div class="controls"><div><small>HAND SIGNAL</small><b id="hand-name">—</b><span id="power">000 PWR</span></div><button id="lock" disabled>LOCK HAND <kbd>ENTER</kbd></button></div></div>
+  <div id="intro" class="modal intro"><span class="eyebrow">TABLE PROTOCOL / 4 SEATS</span><h1>基本はポーカー。<br>世界だけが壊れる。</h1><p>8枚から5枚を選ぶ。全員のショーダウン後、勝者が次のアンティに適用する「CHAOS RULE」を選ぶ。5アンティで最も多く勝った者が勝者。</p><button id="start">DEAL CARDS <kbd>SPACE</kbd></button></div>
+  <div id="pass" class="modal pass hidden"><span class="eyebrow">PRIVATE HANDOFF</span><h2 id="pass-title">PASS TO PLAYER 02</h2><p>前のプレイヤーから画面を受け取ってください。手札は次の操作で公開されます。</p><button id="reveal">REVEAL MY HAND</button></div>
+  <div id="chaos" class="modal chaos hidden"><div class="chaos-head"><div><span class="eyebrow">ANTE COMPLETE</span><h2 id="chaos-title">P1 CHOOSES CHAOS</h2></div><b id="draft-time">12</b></div><div id="chaos-cards" class="chaos-cards"></div></div>
+  <div id="result" class="modal result hidden"><span class="eyebrow">RUN COMPLETE</span><h2 id="result-title">PLAYER 01 WINS</h2><p id="result-copy"></p><button id="restart">NEW TABLE <kbd>R</kbd></button></div>
+</section><footer><span>SELECT CARD → LOCK HAND → PASS / SHOWDOWN</span><button id="help">RULES [?]</button><span id="message">WAITING FOR DEAL</span></footer></main>
+<dialog id="manual"><button class="close">×</button><span class="eyebrow">RULE BOOK / 01</span><h2>ポーカー + 共有カオス。</h2><div class="manual-grid"><p><b>DEAL</b>各プレイヤーに8枚。5枚を選び、通常のポーカー役で勝負。</p><p><b>LOCAL</b>1台を順番に渡すホットシート方式。ほかの手札は非表示。</p><p><b>CHAOS</b>各アンティの勝者が、次戦から全員へ効く新ルールを選択。</p></div><small>ROYAL &gt; STRAIGHT FLUSH &gt; FOUR &gt; FULL HOUSE &gt; FLUSH &gt; STRAIGHT &gt; THREE &gt; TWO PAIR &gt; PAIR &gt; HIGH</small></dialog><script src="game.js"></script></body></html>
