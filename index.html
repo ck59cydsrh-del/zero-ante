@@ -1,11 +1,87 @@
-<!doctype html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><meta name="theme-color" content="#080906"><meta name="description" content="国際トーナメント基準の2～6人ノーリミット・テキサスホールデム。"><meta property="og:title" content="ZERO//ANTE — TOURNAMENT HOLD'EM"><meta property="og:description" content="TDA準拠のポーカーと、判断を拡張するローグライク・モジュール。"><meta property="og:image" content="https://odd-even-rogue-duel.yuhgamiya.chatgpt.site/og.png"><title>ZERO//ANTE — TOURNAMENT HOLD'EM</title><link rel="stylesheet" href="style.css"></head><body><div class="rotate"><b>↻</b><span>横向きにしてください</span><small>LANDSCAPE MODE REQUIRED</small></div><main class="console">
-<header><a class="logo" href="#">ZERO<span>//</span>ANTE</a><div class="street-nav"><i id="s-pre" class="on">PRE</i><i id="s-flop">FLOP</i><i id="s-turn">TURN</i><i id="s-river">RIVER</i></div><div class="run"><span>LEVEL</span><b id="level">01</b></div></header>
-<section class="game"><div class="table-noise"></div><div id="seats" class="seats"></div>
- <div class="holdem-center"><div class="pot-box"><small>TOTAL POT</small><strong id="pot">0000</strong><span id="blinds">SB 10 / BB 20 / BBA 20</span></div><div id="board" class="board-cards"></div><div id="table-msg" class="glitch">WAITING FOR TABLE</div></div>
- <div class="active-pod holdem-pod"><div class="active-meta"><span id="active-name">PLAYER_01</span><b id="turn-info">TO ACT</b></div><div class="hole-wrap"><div id="hole" class="hand hole"></div><div class="decision"><small>CURRENT HAND</small><b id="hand-name">—</b><span id="module-readout">NO MODULE DATA</span></div></div><div class="bet-controls"><button id="fold" class="dark">FOLD</button><button id="checkcall">CHECK</button><div class="raise-control"><button id="minus">−</button><b id="raise-value">40</b><button id="plus">＋</button></div><button id="raise">RAISE TO</button><button id="allin" class="red">ALL-IN</button></div></div>
- <div id="setup" class="modal setup"><span class="eyebrow">TDA CORE / TABLE SETUP</span><h1>TOURNAMENT<br>HOLD'EM</h1><div class="setup-grid"><label>PLAY MODE<select id="mode"><option value="solo">1 PLAYER + CPU</option><option value="local">LOCAL PLAYERS</option></select></label><label>SEATS<select id="count"><option>2</option><option>3</option><option>4</option><option>5</option><option selected>6</option></select></label></div><p>各プレイヤー1,000チップ。ノーリミット、ビッグブラインドアンティ、3ハンドごとにブラインドアップ。</p><button id="start">OPEN TABLE <kbd>SPACE</kbd></button></div>
- <div id="pass" class="modal pass hidden"><span class="eyebrow">ONE PLAYER TO A HAND</span><h2 id="pass-title">PASS TO PLAYER 02</h2><p>ほかのプレイヤーは画面から離れてください。次の操作でホールカードを公開します。</p><button id="reveal">REVEAL & ACT</button></div>
- <div id="relic" class="modal chaos hidden"><div class="chaos-head"><div><span class="eyebrow">HAND WON / MODULE DRAFT</span><h2 id="relic-title">CHOOSE MODULE</h2></div><b id="draft-time">12</b></div><div id="relic-cards" class="chaos-cards"></div></div>
- <div id="result" class="modal result hidden"><span class="eyebrow">TOURNAMENT COMPLETE</span><h2 id="winner">PLAYER_01 WINS</h2><p id="result-copy"></p><button id="restart">NEW TOURNAMENT <kbd>R</kbd></button></div>
-</section><footer><span>TDA CORE / NLH / 2–6 PLAYERS</span><button id="help">RULES [?]</button><span id="message">CONFIGURE TABLE</span></footer></main>
-<dialog id="manual"><button class="close">×</button><span class="eyebrow">RULE BOOK / TDA CORE</span><h2>NO-LIMIT TEXAS HOLD'EM</h2><div class="manual-grid"><p><b>DEAL</b>各2枚のホールカードと、全員共通の5枚のコミュニティカード。</p><p><b>BET</b>プリフロップ、フロップ、ターン、リバーでチェック／コール／レイズ／フォールド。</p><p><b>WIN</b>7枚から最強の5枚を作る。同順位はポットを分割し、スートで優劣を付けない。</p></div><small>2024 Poker TDA rules used as procedural reference. Game-specific automated rulings are handled by the table.</small></dialog><script src="game.js"></script></body></html>
+<!doctype html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+    <meta name="theme-color" content="#080906">
+    <meta name="description" content="国際トーナメント基準の2～6人ノーリミット・テキサスホールデム。">
+    <meta property="og:title" content="ZERO//ANTE — TOURNAMENT HOLD'EM">
+    <meta property="og:description" content="TDA準拠のポーカーと、判断を拡張するローグライク・モジュール。">
+    <meta property="og:image" content="https://odd-even-rogue-duel.yuhgamiya.chatgpt.site/og.png">
+    <title>ZERO//ANTE — TOURNAMENT HOLD'EM</title>
+    <link rel="stylesheet" href="style.css?v=7">
+</head>
+
+<body>
+    <div class="rotate"><b>↻</b><span>横向き推奨</span><small>回転するとテーブル全体が見やすくなります</small></div>
+    <main class="console">
+        <header><a class="logo" href="#">ZERO<span>//</span>ANTE</a>
+            <div class="street-nav"><i id="s-pre" class="on">PRE</i><i id="s-flop">FLOP</i><i id="s-turn">TURN</i><i id="s-river">RIVER</i></div>
+            <div class="run"><span>LEVEL</span><b id="level">01</b></div>
+        </header>
+        <section class="game">
+            <div class="table-noise"></div>
+            <div id="seats" class="seats"></div>
+            <div class="holdem-center">
+                <div class="pot-box"><small>TOTAL POT</small><strong id="pot">0000</strong><span id="blinds">SB 10 / BB 20 / BBA 20</span></div>
+                <div id="board" class="board-cards"></div>
+                <div id="table-msg" class="glitch">WAITING FOR TABLE</div>
+            </div>
+            <div class="active-pod holdem-pod">
+                <div class="active-meta"><span id="active-name">PLAYER_01</span><b id="turn-info">TO ACT</b></div>
+                <div id="guidance" class="guidance"><b>01</b><span>テーブルを開くと、ここにあなたの2枚が表向きで表示されます。</span></div>
+                <div class="hole-wrap">
+                    <div id="hole" class="hand hole"></div>
+                    <div class="decision"><small>CURRENT HAND</small><b id="hand-name">—</b><span id="module-readout">NO MODULE DATA</span></div>
+                </div>
+                <div class="bet-controls"><button id="fold" class="dark">FOLD</button><button id="checkcall">CHECK</button>
+                    <div class="raise-control"><button id="minus">−</button><b id="raise-value">40</b><button id="plus">＋</button></div><button id="raise">RAISE TO</button><button id="allin" class="red">ALL-IN</button>
+                </div>
+            </div>
+            <div id="setup" class="modal setup"><span class="eyebrow">TDA CORE / TABLE SETUP</span>
+                <h1>TOURNAMENT<br>HOLD'EM</h1>
+                <div class="setup-grid"><label>PLAY MODE<select id="mode">
+                            <option value="solo">1 PLAYER + CPU</option>
+                            <option value="local">LOCAL PLAYERS</option>
+                        </select></label><label>SEATS<select id="count">
+                            <option selected>2</option>
+                            <option>3</option>
+                            <option>4</option>
+                            <option>5</option>
+                            <option>6</option>
+                        </select></label></div>
+                <div class="quick-guide"><span><b>1</b> 自分だけが見る2枚</span><span><b>2</b> CHECK / CALL / RAISE</span><span><b>3</b> 場の5枚と合わせる</span><span><b>4</b> 最強の5枚で勝負</span></div>
+                <p>各プレイヤー1,000チップ。ノーリミット、ビッグブラインドアンティ、3ハンドごとにブラインドアップ。最初は2人戦がおすすめです。</p><button id="start">ゲームを始める <kbd>SPACE</kbd></button>
+            </div>
+            <div id="pass" class="modal pass hidden"><span class="eyebrow">ONE PLAYER TO A HAND</span>
+                <h2 id="pass-title">PASS TO PLAYER 02</h2>
+                <p>ほかのプレイヤーは画面から離れてください。次の操作でホールカードを公開します。</p><button id="reveal">REVEAL & ACT</button>
+            </div>
+            <div id="relic" class="modal chaos hidden">
+                <div class="chaos-head">
+                    <div><span class="eyebrow">HAND WON / MODULE DRAFT</span>
+                        <h2 id="relic-title">CHOOSE MODULE</h2>
+                    </div><b id="draft-time">12</b>
+                </div>
+                <div id="relic-cards" class="chaos-cards"></div>
+            </div>
+            <div id="result" class="modal result hidden"><span class="eyebrow">TOURNAMENT COMPLETE</span>
+                <h2 id="winner">PLAYER_01 WINS</h2>
+                <p id="result-copy"></p><button id="restart">NEW TOURNAMENT <kbd>R</kbd></button>
+            </div>
+        </section>
+        <footer><span>TDA CORE / NLH / 2–6 PLAYERS</span><button id="help">RULES [?]</button><span id="message">CONFIGURE TABLE</span></footer>
+    </main>
+    <dialog id="manual"><button class="close">×</button><span class="eyebrow">RULE BOOK / TDA CORE</span>
+        <h2>NO-LIMIT TEXAS HOLD'EM</h2>
+        <div class="manual-grid">
+            <p><b>DEAL</b>各2枚のホールカードと、全員共通の5枚のコミュニティカード。</p>
+            <p><b>BET</b>プリフロップ、フロップ、ターン、リバーでチェック／コール／レイズ／フォールド。</p>
+            <p><b>WIN</b>7枚から最強の5枚を作る。同順位はポットを分割し、スートで優劣を付けない。</p>
+        </div><small>2024 Poker TDA rules used as procedural reference. Game-specific automated rulings are handled by the table.</small>
+    </dialog>
+    <script src="game.js?v=7"></script>
+</body>
+
+</html>

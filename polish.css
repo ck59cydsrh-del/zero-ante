@@ -1,0 +1,191 @@
+.guidance {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 7px 0 3px;
+  padding: 7px 9px;
+  border: 2px solid var(--paper);
+  background: #fff;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.guidance > b {
+  flex: 0 0 auto;
+  padding: 4px 6px;
+  background: var(--red);
+  color: #fff;
+  font-size: 8px;
+}
+
+.guidance strong {
+  color: var(--red);
+}
+
+.quick-guide {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.quick-guide span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px;
+  border: 1px solid var(--paper);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.quick-guide b {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  background: var(--paper);
+  color: var(--bg);
+}
+
+.active-meta,
+.bet-controls button {
+  font-size: 10px;
+}
+
+.modal p {
+  font-size: 11px;
+}
+
+footer {
+  font-size: 9px;
+}
+
+@media (max-width: 760px) and (orientation: landscape) {
+  .holdem-pod {
+    width: 78vw;
+  }
+
+  .guidance {
+    margin: 3px 0;
+    padding: 4px 6px;
+    font-size: 7px;
+  }
+}
+
+@media (orientation: portrait) {
+  .console {
+    display: grid;
+  }
+
+  .rotate {
+    z-index: 30;
+    inset: 8px 8px auto auto;
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
+    padding: 6px 8px;
+    border: 2px solid var(--paper);
+    background: var(--red);
+    color: #fff;
+    box-shadow: 2px 2px 0 var(--paper);
+    pointer-events: none;
+  }
+
+  .rotate b {
+    color: #fff;
+    font-size: 15px;
+  }
+
+  .rotate span {
+    font-size: 8px;
+  }
+
+  .rotate small,
+  .street-nav {
+    display: none;
+  }
+
+  .game::before {
+    inset: 5% 3%;
+  }
+
+  .holdem-center {
+    top: 31%;
+    transform: translate(-50%, -50%) scale(0.72);
+  }
+
+  .holdem-pod {
+    width: 94vw;
+    bottom: 8px;
+  }
+
+  .pos-0 { bottom: 260px; }
+  .pos-1 { left: 2%; bottom: 39%; }
+  .pos-2 { left: 2%; top: 8%; }
+  .pos-3 { top: 8%; }
+  .pos-4 { right: 2%; top: 8%; }
+  .pos-5 { right: 2%; bottom: 39%; }
+
+  .h-seat {
+    width: 116px;
+    min-height: 52px;
+    padding: 4px;
+  }
+
+  .h-seat strong {
+    font-size: 10px;
+  }
+
+  .tiny-cards {
+    display: none;
+  }
+
+  .h-seat.showing .tiny-cards {
+    display: flex;
+  }
+
+  .hole-wrap {
+    grid-template-columns: 150px 1fr;
+  }
+
+  .hole .card {
+    width: 62px;
+    height: 88px;
+  }
+
+  .bet-controls {
+    grid-template-columns: 0.7fr 1fr 1.2fr 1fr 0.8fr;
+    gap: 3px;
+  }
+
+  .bet-controls button {
+    min-height: 32px;
+    font-size: 7px;
+  }
+
+  .guidance {
+    font-size: 8px;
+  }
+
+  .setup {
+    width: 92vw;
+  }
+
+  .setup-grid {
+    margin: 10px 0;
+  }
+
+  .quick-guide {
+    grid-template-columns: 1fr;
+  }
+
+  .modal {
+    max-height: 88vh;
+    overflow: auto;
+  }
+
+  .modal h1 {
+    font-size: 32px;
+  }
+}
