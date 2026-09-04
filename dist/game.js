@@ -43,6 +43,27 @@
         fxQueue = [],
         fxBusy = false,
         actionPopTimer = 0;
+
+    function setTheme(value, remember = true) {
+        const theme = value === "dark" ? "dark" : "light";
+        document.body.dataset.theme = theme;
+        document.querySelectorAll('input[name="theme"]').forEach((input) => {
+            input.checked = input.value === theme;
+        });
+        const toggle = $("#theme-toggle");
+        if (toggle) {
+            toggle.querySelector("span").textContent = theme === "dark" ? "BLACK" : "WHITE";
+            toggle.setAttribute("aria-pressed", String(theme === "dark"));
+        }
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.content = theme === "dark" ? "#0b0c0f" : "#f6f5f0";
+        if (remember) {
+            try { localStorage.setItem("zero-ante-theme", theme); } catch (_) {}
+        }
+    }
+
+    try { setTheme(localStorage.getItem("zero-ante-theme") || "light", false); }
+    catch (_) { setTheme("light", false); }
     const mods = [{
             id: "odds",
             icon: "%POT",
@@ -292,6 +313,7 @@
     }
 
     function init() {
+        setTheme(document.querySelector('input[name="theme"]:checked')?.value || "light");
         mode = $("#mode").value;
         N = +$("#count").value;
         document.body.dataset.players = String(N);
@@ -420,7 +442,7 @@
             setTimeout(cpu, 900);
             return;
         }
-        if (mode === "local" && !first) {
+        if (mode === "local") {
             phase = "pass";
             $("#pass-title").textContent = `PASS TO ${p.name}`;
             $("#pass").classList.remove("hidden");
@@ -534,7 +556,7 @@
             .filter((p) => !p.allin)
             .map((p) => p.id),
         );
-        if (pending.size <= 1 && live().every((p) => p.allin || p.folded)) {
+        if (live().filter((p) => !p.allin).length <= 1) {
             const targetBoard = live().some((p) => p.mods.some((m) => m.id === "sixboard")) ? 6 : 5;
             while (board.length < targetBoard) {
                 deck.pop();
@@ -578,6 +600,7 @@
     function showdown() {
         street = "showdown";
         phase = "showdown";
+        const awardedPot = pot();
         let eligible = live();
         eligible.forEach((p) => (p.rank = handRank(p)));
         let levels = [...new Set(P.map((p) => p.total).filter(Boolean))].sort(
@@ -602,15 +625,24 @@
         });
         mainWinner = main[0];
         P.forEach((p) => (p.last = p.folded ? "FOLD" : p.rank.name));
+        P.forEach((p) => {
+            p.total = 0;
+            p.bet = 0;
+        });
         render(true);
         const names = main.map((p) => p.name).join(" + ");
         pushLog(`${names} WIN / ${main[0].rank.name}`, "win");
-        announce("POT AWARDED", main[0].rank.name, `${names} +${pot()}`, "win", 2200);
+        announce("POT AWARDED", main[0].rank.name, `${names} +${awardedPot}`, "win", 2200);
         setTimeout(() => afterHand(main), 2400);
     }
 
     function awardUncontested(p) {
-        p.chips += pot();
+        const awardedPot = pot();
+        p.chips += awardedPot;
+        P.forEach((player) => {
+            player.total = 0;
+            player.bet = 0;
+        });
         p.last = "POT WON";
         mainWinner = p;
         phase = "won";
@@ -799,6 +831,10 @@
         }
     }
     $("#start").onclick = init;
+    document.querySelectorAll('input[name="theme"]').forEach((input) => {
+        input.addEventListener("change", () => setTheme(input.value));
+    });
+    $("#theme-toggle").onclick = () => setTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
     window.addEventListener("keydown", (e) => {
         if (e.code === "Space" && phase === "setup") {
             e.preventDefault();

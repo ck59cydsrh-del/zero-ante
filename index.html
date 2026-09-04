@@ -4,21 +4,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-    <meta name="theme-color" content="#080906">
+    <meta name="theme-color" content="#f6f5f0">
     <meta name="description" content="国際トーナメント基準の2～6人ノーリミット・テキサスホールデム。">
     <meta property="og:title" content="ZERO//ANTE — TOURNAMENT HOLD'EM">
     <meta property="og:description" content="TDA準拠のポーカーと、判断を拡張するローグライク・モジュール。">
     <meta property="og:image" content="https://odd-even-rogue-duel.yuhgamiya.chatgpt.site/og.png">
     <title>ZERO//ANTE — TOURNAMENT HOLD'EM</title>
-    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="stylesheet" href="style.css?v=12">
 </head>
 
-<body>
+<body data-theme="light">
     <div class="rotate"><b>↻</b><span>横向き推奨</span><small>回転するとテーブル全体が見やすくなります</small></div>
     <main class="console">
         <header><a class="logo" href="#">ZERO<span>//</span>ANTE</a>
             <div class="street-nav"><i id="s-pre" class="on">PRE</i><i id="s-flop">FLOP</i><i id="s-turn">TURN</i><i id="s-river">RIVER</i></div>
-            <div class="run"><span>LEVEL</span><b id="level">01</b></div>
+            <div class="header-tools"><button id="theme-toggle" type="button" aria-label="表示色を切り替える"><i></i><span>WHITE</span></button><div class="run"><span>LEVEL</span><b id="level">01</b></div></div>
         </header>
         <section class="game">
             <div class="table-noise"></div>
@@ -62,6 +62,7 @@
                             <option>5</option>
                             <option>6</option>
                         </select></label></div>
+                <fieldset class="theme-picker"><legend>CABINET COLOR</legend><label><input type="radio" name="theme" value="light" checked><span><i></i>WHITE</span></label><label><input type="radio" name="theme" value="dark"><span><i></i>BLACK</span></label></fieldset>
                 <div class="quick-guide"><span><b>1</b> 自分だけが見る2枚</span><span><b>2</b> CHECK / CALL / RAISE</span><span><b>3</b> 場の5枚と合わせる</span><span><b>4</b> 最強の5枚で勝負</span></div>
                 <p>各プレイヤー1,000チップ。勝つたびに能力を獲得。情報・妨害・防御・ルール改変が次のハンドから自動発動します。</p><button id="start">ゲームを始める <kbd>SPACE</kbd></button>
             </div>
@@ -95,7 +96,7 @@
             <p><b class="chaos-key">CHAOS</b>6枚目の場札など、その試合だけルールを改変。</p>
         </div><small>2024 Poker TDA rules used as procedural reference. Rogue modules are explicit game variants and are announced before they resolve.</small>
     </dialog>
-    <script src="game.js?v=11"></script>
+    <script src="game.js?v=12"></script>
 </body>
 
 </html>

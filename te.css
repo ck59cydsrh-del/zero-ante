@@ -1,0 +1,304 @@
+/* PASS 01 — cabinet system: TE-inspired instrument, not a casino skin. */
+:root {
+  --te-bg: #f6f5f0;
+  --te-surface: #fffef9;
+  --te-inset: #e9e7df;
+  --te-ink: #171923;
+  --te-muted: #62646d;
+  --te-shadow: #b8b7b0;
+  --te-pink: #ec5275;
+  --te-blue: #568bd0;
+  --te-green: #5a9d65;
+  --te-yellow: #e8bf4f;
+  --te-violet: #706d9e;
+}
+
+body[data-theme="light"] {
+  --bg: var(--te-bg);
+  --panel: var(--te-surface);
+  --paper: var(--te-ink);
+  --muted: var(--te-muted);
+  --red: var(--te-pink);
+  --pink: var(--te-pink);
+  --blue: var(--te-blue);
+  --green: var(--te-green);
+  --yellow: var(--te-yellow);
+  --violet: var(--te-violet);
+}
+
+body[data-theme="dark"] {
+  --bg: #0b0c0f;
+  --panel: #15171b;
+  --paper: #f3f1e8;
+  --muted: #b7b7b0;
+  --red: #ff6587;
+  --pink: #ff6587;
+  --blue: #78a7e6;
+  --green: #76bd80;
+  --yellow: #f1ce69;
+  --violet: #9995c9;
+  --te-surface: #17191e;
+  --te-inset: #24262c;
+  --te-shadow: #000;
+  --te-ink: #f3f1e8;
+  --te-muted: #b7b7b0;
+}
+
+body, .console, header, footer { background: var(--bg) !important; color: var(--paper); }
+.console {
+  border: 4px solid var(--paper);
+  box-shadow: inset 0 0 0 3px var(--bg), inset 0 0 0 5px color-mix(in srgb, var(--paper) 28%, var(--bg));
+}
+.game {
+  background-color: var(--bg);
+  background-image: linear-gradient(90deg, color-mix(in srgb, var(--paper) 7%, transparent) 1px, transparent 1px), linear-gradient(color-mix(in srgb, var(--paper) 7%, transparent) 1px, transparent 1px);
+  background-size: 8px 8px;
+}
+.game::before {
+  background: color-mix(in srgb, var(--panel) 91%, var(--pink));
+  border-color: var(--paper);
+  box-shadow: inset 0 0 0 3px var(--bg), inset 0 0 0 6px color-mix(in srgb, var(--paper) 18%, var(--bg)), 7px 7px 0 color-mix(in srgb, var(--paper) 24%, var(--bg));
+}
+
+/* PASS 02 — legibility: no decorative doubles, no essential microtype. */
+body { font-size: 14px; }
+.logo, .modal h1, .modal h2, .event-fx strong, .pot-box strong, .screen strong { text-shadow: none !important; }
+.logo { font-size: 20px; line-height: 1; }
+.street-nav i { min-width: 48px; padding: 7px 10px; font-size: 11px; text-align: center; }
+.run { font-size: 10px; }
+.run span, .run b { padding: 7px 9px; }
+.genre-key span { padding: 5px 7px; font-size: 10px; }
+.action-feed { width: 210px; }
+.action-feed > b { font-size: 11px; }
+#action-log span { font-size: 11px; line-height: 1.45; }
+.h-seat { width: 174px; font-size: 11px; }
+.h-seat header b { font-size: 12px; }
+.h-seat > small { font-size: 11px; }
+.seat-bank strong { font-size: 17px; }
+.guidance { font-size: 13px; line-height: 1.45; }
+.guidance > b { font-size: 11px; }
+.module-tray .empty, .mod-chip { font-size: 11px; }
+.decision small, .decision span { font-size: 11px; }
+.decision b { font-size: 22px; }
+.stack-strip small { font-size: 10px; }
+.stack-strip b, .stack-strip strong { font-size: 17px; }
+.stack-strip .my-stack strong { font-size: 24px; }
+.bet-controls button { font-size: 12px; }
+.pot-box small, .pot-box span { font-size: 11px; }
+.glitch { font-size: 11px; }
+.modal p { color: var(--muted); font-size: 14px; line-height: 1.65; }
+.setup-grid label, .theme-picker legend { font-size: 12px; }
+.setup-grid select { font-size: 14px; }
+.quick-guide span { font-size: 12px; }
+footer, footer button { font-size: 11px; }
+footer button { min-height: 22px; padding: 2px 8px; }
+dialog { width: min(760px, 92vw); background: #f6f5f0; color: #171923; }
+dialog h2 { font-size: 25px; }
+.manual-grid p { color: #171923; font-size: 11px; line-height: 1.55; }
+dialog small { font-size: 10px; line-height: 1.5; }
+
+/* PASS 03 — top instrument rail and persistent mode switch. */
+header { grid-template-columns: 1fr auto 1fr; min-height: 54px; padding: 0 16px; border-bottom: 3px solid var(--paper); }
+.header-tools { justify-self: end; display: flex; align-items: center; gap: 10px; }
+#theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 5px 9px;
+  border: 2px solid var(--paper);
+  background: var(--panel);
+  color: var(--paper);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--paper) 34%, var(--bg));
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+#theme-toggle i { width: 12px; height: 12px; border: 2px solid var(--paper); background: var(--bg); }
+.street-nav { border: 2px solid var(--paper); background: var(--panel); }
+.street-nav i { border-right: 2px solid var(--paper); }
+.street-nav i.on { background: var(--pink); color: #fff; }
+.run { background: var(--panel); border: 2px solid var(--paper); }
+
+/* PASS 04 — setup as a readable hardware configuration plate. */
+.modal, .action-feed, .h-seat, .active-pod, .event-fx, .action-pop, .glitch {
+  background: var(--panel);
+  color: var(--paper);
+  border-color: var(--paper);
+}
+.pass, .chaos, .result { z-index: 40; }
+.setup { width: min(720px, 88vw); }
+.setup { z-index: 50; }
+.setup::before {
+  content: "";
+  position: fixed;
+  z-index: -2;
+  inset: -100vh -100vw;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+}
+.setup-grid { gap: 12px; }
+.setup-grid label { gap: 8px; font-weight: 900; letter-spacing: .08em; }
+.setup-grid select {
+  min-height: 46px;
+  padding: 9px 12px;
+  border: 3px solid var(--paper);
+  background: var(--bg);
+  color: var(--paper);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--paper) 30%, var(--bg));
+}
+.theme-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.theme-picker legend { margin-bottom: 7px; font-weight: 900; letter-spacing: .08em; }
+.theme-picker label { cursor: pointer; }
+.theme-picker input { position: absolute; opacity: 0; pointer-events: none; }
+.theme-picker span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 3px solid var(--paper);
+  background: var(--bg);
+  color: var(--paper);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--paper) 30%, var(--bg));
+  font-size: 13px;
+  font-weight: 900;
+}
+.theme-picker span i { width: 18px; height: 18px; border: 3px solid var(--paper); background: #f6f5f0; }
+.theme-picker label:last-child span i { background: #0b0c0f; }
+.theme-picker input:checked + span { background: var(--paper); color: var(--bg); box-shadow: 5px 5px 0 var(--pink); }
+.theme-picker input:checked + span i { border-color: var(--bg); }
+.quick-guide span { min-height: 44px; background: var(--bg); border: 2px solid var(--paper); }
+.quick-guide b { flex: 0 0 24px; width: 24px; height: 24px; background: var(--paper); color: var(--bg); }
+.modal button { background: var(--paper); color: var(--bg); }
+.setup > button { min-height: 50px; font-size: 13px; }
+
+/* PASS 05 — table hierarchy: actor first, noise last. */
+.holdem-center { top: 29%; }
+.pot-box { margin-bottom: 8px; }
+.pot-box strong { font-size: 38px; color: var(--pink); }
+.h-seat { min-height: 80px; background: var(--panel); box-shadow: 4px 4px 0 color-mix(in srgb, var(--paper) 30%, var(--bg)); }
+.h-seat .avatar { background: var(--bg); color: var(--paper); font-size: 14px; }
+.h-seat.acting { border-color: var(--pink); box-shadow: 4px 4px 0 var(--pink), 8px 8px 0 var(--paper); }
+.h-seat.acting::after { content: "● YOUR TURN"; bottom: -21px; min-height: 20px; padding: 4px 7px; font-size: 9px; animation: none; }
+.h-seat.folded { opacity: .5; filter: grayscale(1); }
+.holdem-pod { width: min(840px, 78vw); padding: 13px; background: var(--panel); }
+.active-meta { font-size: 13px; }
+.guidance { min-height: 44px; background: var(--bg); border-color: var(--paper); box-shadow: inset 6px 0 0 var(--pink); }
+.decision { border-left: 2px solid color-mix(in srgb, var(--paper) 35%, var(--bg)); }
+.stack-strip { background: var(--bg); border: 3px solid var(--paper); box-shadow: 3px 3px 0 color-mix(in srgb, var(--paper) 28%, var(--bg)); }
+.stack-strip > div { border-right: 2px solid var(--paper); }
+.stack-strip .my-stack { background: var(--paper); }
+.stack-strip .my-stack small { color: color-mix(in srgb, var(--bg) 70%, var(--paper)); }
+.stack-strip .my-stack strong { color: var(--bg); }
+
+/* PASS 06 — cards and chips: strict pixel assets in both cabinets. */
+.card { border-width: 3px !important; image-rendering: pixelated; }
+body[data-theme="dark"] .card:not(.card-back) {
+  color: #171923;
+  border-color: #f3f1e8 !important;
+  background: #f8f6ee !important;
+  box-shadow: 4px 4px 0 #73747b, 6px 6px 0 #f3f1e8 !important;
+}
+body[data-theme="dark"] .card.hot:not(.card-back) { color: #ec5275 !important; }
+body[data-theme="dark"] .card-back { border-color: #f3f1e8 !important; }
+.card .corner b { font-weight: 900; }
+.board-cards { gap: 10px; }
+.board-cards .card-back { opacity: .62; }
+.mini-chip, .chip-pile i { image-rendering: pixelated; }
+.seat-bank { min-width: 58px; }
+
+/* PASS 07 — action feedback: smooth motion, discrete pixel surfaces. */
+.bet-controls { gap: 8px; }
+.bet-controls button {
+  min-height: 44px;
+  border: 3px solid var(--paper);
+  background: var(--panel);
+  color: var(--paper);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--paper) 35%, var(--bg));
+  transition: transform .16s cubic-bezier(.2,.8,.2,1), box-shadow .16s ease, background .12s ease;
+}
+.bet-controls button.dark { background: var(--bg); color: var(--paper); }
+.bet-controls button.red { background: var(--pink); color: #fff; }
+.bet-controls button:disabled { opacity: .46; background: color-mix(in srgb, var(--panel) 80%, var(--muted)); color: var(--muted); }
+.raise-control { border: 3px solid var(--paper); background: var(--bg); }
+.raise-control b { color: var(--paper); font-size: 14px; }
+.action-pop { bottom: 224px; padding: 11px 18px; border: 3px solid var(--paper); box-shadow: 5px 5px 0 var(--blue); transition: opacity .2s ease, transform .3s cubic-bezier(.16,1,.3,1); }
+.action-pop small { color: var(--muted); font-size: 11px; }
+.action-pop strong { font-size: 22px; }
+.event-fx { border: 4px solid var(--paper); box-shadow: 7px 7px 0 var(--pink), 11px 11px 0 var(--paper); animation: teFxIn .3s cubic-bezier(.16,1,.3,1) both; }
+.event-fx.out { animation: teFxOut .2s ease both; }
+.event-fx small { font-size: 11px; }
+.event-fx span { font-size: 13px; line-height: 1.4; }
+.chaos-cards button { background: var(--bg); color: var(--paper); }
+.chaos-cards button > span { font-size: 10px; }
+.chaos-cards button > i { font-size: 26px; }
+.chaos-cards button > h3 { font-size: 14px; line-height: 1.25; }
+.chaos-cards button > p { color: var(--muted); font-size: 12px; line-height: 1.45; }
+.chaos-cards button > em { font-size: 9px; }
+@keyframes teFxIn { from { opacity: 0; transform: translate(-50%, -46%) scale(.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes teFxOut { to { opacity: 0; transform: translate(-50%, -53%) scale(1.02); } }
+
+/* PASS 08 — keyboard, zoom and compact landscape resilience. */
+button:focus-visible, select:focus-visible, .theme-picker input:focus-visible + span {
+  outline: 4px solid var(--blue);
+  outline-offset: 3px;
+}
+button, select, .theme-picker label { touch-action: manipulation; }
+
+@media (max-width: 900px) and (orientation: landscape) {
+  header { min-height: 42px; padding: 0 8px; }
+  .logo { font-size: 16px; }
+  #theme-toggle { min-height: 29px; padding: 4px 6px; font-size: 9px; }
+  .street-nav i { min-width: 38px; padding: 5px 6px; font-size: 9px; }
+  .run span, .run b { padding: 5px 6px; }
+  .genre-key span { font-size: 8px; }
+  .action-feed { width: 150px; }
+  .action-feed > b, #action-log span { font-size: 9px; }
+  .h-seat { width: 128px; min-height: 55px; font-size: 9px; }
+  .h-seat header b, .h-seat > small { font-size: 9px; }
+  .seat-bank strong { font-size: 12px; }
+  .holdem-pod { width: 84vw; padding: 7px; }
+  .guidance { min-height: 31px; font-size: 10px; }
+  .module-tray .empty, .mod-chip { font-size: 9px; }
+  .decision small, .decision span { font-size: 9px; }
+  .stack-strip small { font-size: 8px; }
+  .bet-controls { gap: 4px; }
+  .bet-controls button { min-height: 32px; padding: 0 6px; font-size: 9px; }
+  .bet-controls button::before { width: 6px; height: 6px; flex-basis: 6px; }
+  .action-pop { bottom: 166px; }
+}
+
+@media (max-width: 700px) {
+  .manual-grid { grid-template-columns: 1fr 1fr; }
+  .manual-grid p { font-size: 11px; }
+}
+
+@media (orientation: portrait) {
+  .rotate span { font-size: 10px; }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .console { grid-template-rows: 42px 1fr 24px; }
+  .holdem-center { top: 26%; transform: translate(-50%, -50%) scale(.72); }
+  .holdem-pod { bottom: 3px; }
+  .guidance { margin: 2px 0; padding: 4px 7px; }
+  .module-tray { min-height: 18px; padding: 2px 0; }
+  .hole-wrap { grid-template-columns: 132px 1fr; }
+  .hole { height: 73px; }
+  .hole .card { width: 50px; height: 71px; }
+  .stack-strip > div { min-height: 31px; padding: 3px 6px; }
+  .setup { max-height: 90vh; overflow: auto; padding: 14px; }
+  .setup h1 { margin: 8px 0; font-size: 30px; }
+  .quick-guide { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
