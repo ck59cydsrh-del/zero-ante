@@ -9,13 +9,13 @@
             14: "A"
         },
         LEVELS = [
-            [10, 20],
-            [15, 30],
             [25, 50],
             [40, 80],
             [60, 120],
             [100, 200],
             [150, 300],
+            [250, 500],
+            [400, 800],
         ];
     let mode = "solo",
         N = 6,
@@ -68,18 +68,25 @@
     let soundEnabled = false, audioContext;
     function cue(kind) {
         if (!soundEnabled || !audioContext) return;
-        const notes = kind === "win" ? [440, 554, 659, 880] : kind === "attack" ? [165, 330] : [420, 560];
-        notes.forEach((frequency, i) => {
-            const oscillator = audioContext.createOscillator(), gain = audioContext.createGain();
-            const t = audioContext.currentTime + i * .075;
-            oscillator.type = "triangle";
-            oscillator.frequency.value = frequency;
-            gain.gain.setValueAtTime(0, t);
-            gain.gain.linearRampToValueAtTime(.035, t + .008);
-            gain.gain.exponentialRampToValueAtTime(.001, t + .16);
-            oscillator.connect(gain).connect(audioContext.destination);
-            oscillator.start(t); oscillator.stop(t + .18);
+        const victory=kind==="win";
+        const heavy=["allin","attack","chaos","raise"].includes(kind);
+        const notes=({win:[523,659,784,1047,1319,1568],check:[880],fold:[330,165],call:[659,880],raise:[220,330,494],allin:[110,165,220,440,880],defeat:[392,294,196],attack:[130,260],chaos:[277,415,554],guard:[440,554,659],info:[740,988],street:[523,659]})[kind]||[392,523];
+        const now=audioContext.currentTime;
+        notes.forEach((frequency,i)=>{
+            const osc=audioContext.createOscillator(),gain=audioContext.createGain();
+            const t=now+i*(victory?.085:.05),length=victory?.48:.18;
+            osc.type=heavy?"sawtooth":"triangle";osc.frequency.setValueAtTime(frequency,t);
+            if(heavy) osc.frequency.exponentialRampToValueAtTime(frequency*.5,t+length);
+            gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(heavy?.018:.045,t+.006);
+            gain.gain.exponentialRampToValueAtTime(.001,t+length);
+            osc.connect(gain).connect(audioContext.destination);osc.start(t);osc.stop(t+length+.02);
         });
+        if(victory||heavy){
+            const bass=audioContext.createOscillator(),gain=audioContext.createGain();
+            bass.frequency.setValueAtTime(victory?160:95,now);bass.frequency.exponentialRampToValueAtTime(42,now+.28);
+            gain.gain.setValueAtTime(.09,now);gain.gain.exponentialRampToValueAtTime(.001,now+.34);
+            bass.connect(gain).connect(audioContext.destination);bass.start(now);bass.stop(now+.36);
+        }
     }
     function impact(kind) {
         if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -88,10 +95,11 @@
         requestAnimationFrame(() => table.classList.add(kind === "win" ? "win-pulse" : "pulse"));
         if (kind !== "win" && kind !== "attack" && kind !== "chaos") return;
         const area = $(".game").getBoundingClientRect(), center = $("#pot").getBoundingClientRect();
-        for (let i = 0; i < 18; i++) {
-            const spark = document.createElement("i"), angle = i * Math.PI / 9;
+        const particles=kind==="win"?54:28;
+        for (let i = 0; i < particles; i++) {
+            const spark = document.createElement("i"), angle = i * Math.PI * 2 / particles;
             spark.className = "spark";
-            spark.style.cssText = `--cx:${center.x + center.width / 2 - area.x}px;--cy:${center.y + center.height / 2 - area.y}px;--tx:${Math.cos(angle) * 160}px;--ty:${Math.sin(angle) * 115}px`;
+            spark.style.cssText = `--cx:${center.x + center.width / 2 - area.x}px;--cy:${center.y + center.height / 2 - area.y}px;--tx:${Math.cos(angle) * (kind==="win"?350:220)}px;--ty:${Math.sin(angle) * (kind==="win"?210:140)}px`;
             $("#burst").append(spark); setTimeout(() => spark.remove(), 1100);
         }
     }
@@ -108,75 +116,30 @@
             $("#chip-flight").append(chip); setTimeout(() => chip.remove(), 1100);
         }
     }
-    const mods = [{
-            id: "odds",
-            icon: "%POT",
-            name: "POT CALC",
-            desc: "コール額とポットから必要勝率を表示。",
-            cat: "info",
-        },
-        {
-            id: "scan",
-            icon: "5/7",
-            name: "HAND SCAN",
-            desc: "現在できている最強の役を常時表示。",
-            cat: "info",
-        },
-        {
-            id: "tell",
-            icon: "CPU?",
-            name: "TELL TAP",
-            desc: "CPUのアクション強度を解析表示。",
-            cat: "info",
-        },
-        {
-            id: "scramble",
-            icon: "RIP",
-            name: "CARD SCRAMBLE",
-            desc: "各ハンド開始時、次のCPUの高い方のカードを強制交換。",
-            cat: "attack",
-        },
-        {
-            id: "silence",
-            icon: "NO↑",
-            name: "RAISE JAMMER",
-            desc: "次のCPUはプリフロップでレイズ不能。",
-            cat: "attack",
-        },
-        {
-            id: "rebuy",
-            icon: "+100",
-            name: "LIFE PATCH",
-            desc: "200チップ未満になった時、一度だけ100チップ回復。",
-            cat: "guard",
-        },
-        {
-            id: "insurance",
-            icon: "1BB",
-            name: "FOLD SHIELD",
-            desc: "各ハンド最初のフォールド時、1BBを回収。",
-            cat: "guard",
-        },
-        {
-            id: "redline",
-            icon: "RED+",
-            name: "RED OVERCLOCK",
-            desc: "ショーダウンで♥・♦の数字を1つ上として判定。",
-            cat: "chaos",
-        },
-        {
-            id: "sixboard",
-            icon: "BOARD6",
-            name: "SIXTH STREET",
-            desc: "リバーにコミュニティカードを2枚公開。最強の5枚を選ぶ。",
-            cat: "chaos",
-        },
-    ];
+    const mods = Rogue.catalog;
+    let rewardQueue = [], rewardOwner = null, roundWinners=[], lastActionText="", localNames=[];
+    const safeName=(value,i)=>String(value||"").replace(/[^\p{L}\p{N} _ー・-]/gu,"").trim().slice(0,12)||`プレイヤー${i+1}`;
+    const roleName = name => ({"HIGH CARD":"ハイカード","ONE PAIR":"ワンペア","TWO PAIR":"ツーペア","THREE":"スリーカード","STRAIGHT":"ストレート","FLUSH":"フラッシュ","FULL HOUSE":"フルハウス","FOUR":"フォーカード","STRAIGHT FLUSH":"ストレートフラッシュ","ROYAL FLUSH":"ロイヤルフラッシュ","FIVE OF A KIND":"ファイブカード"})[name]||name;
+    function nameFields(){
+        const el=$("#local-names"); el.classList.toggle("hidden",$("#mode").value!=="local");
+        el.innerHTML=Array.from({length:+$("#count").value},(_,i)=>`<label>${i+1}人目<input id="player-name-${i}" maxlength="12" aria-label="${i+1}人目の名前" value="${safeName(localNames[i],i)}"></label>`).join("");
+        el.querySelectorAll("input").forEach((input,i)=>input.addEventListener("input",()=>localNames[i]=input.value));
+    }
+    $("#mode").addEventListener("change",nameFields);$("#count").addEventListener("change",nameFields);nameFields();
+    function effectContext() { return {players:P, deck, board, bb:LEVELS[level][1],events:[]}; }
+    function publishEffects(ctx) {
+        for (const e of ctx.events) {
+            pushLog(`${e.ownerName} → ${e.targetName} / ${e.name} / ${e.copy}`, e.cat);
+            fxQueue.push({type:`${e.ownerName} → ${e.targetName}`,title:e.name,copy:e.copy,kind:e.cat,duration:1650,effect:e});
+        }
+        if (!fxBusy) playNextFx();
+    }
+    function afterEffects(fn) { if(fxBusy || fxQueue.length) setTimeout(()=>afterEffects(fn),120); else fn(); }
     const CAT = {
-        info: "INFO / 情報",
-        attack: "ATTACK / 妨害",
-        guard: "GUARD / 防御",
-        chaos: "CHAOS / 改変",
+        info: "ヒント",
+        attack: "相手を妨害",
+        guard: "チップ補助",
+        chaos: "カード・ルール変更",
     };
     const active = () => P.filter((p) => p.chips > 0),
         live = () => P.filter((p) => !p.folded),
@@ -277,6 +240,7 @@
             name = st === 14 ? "ROYAL FLUSH" : "STRAIGHT FLUSH";
             tie = [st];
         }
+        if (g[0].n === 5) {cat=9;name="FIVE OF A KIND";tie=[g[0].r];}
         return {
             cat,
             tie,
@@ -299,19 +263,11 @@
             .at(-1);
     }
 
-    function handRank(p) {
-        let cards = [...p.hole, ...board];
-        if (p.mods.some((m) => m.id === "redline")) {
-            cards = cards.map((c) =>
-                c.s === "♥" || c.s === "♦" ? { ...c, r: Math.min(14, c.r + 1) } : c,
-            );
-        }
-        return best7(cards);
-    }
+    function handRank(p) { return best7(Rogue.rankCards(p, board)); }
 
     function pushLog(copy, kind = "system") {
         logs.unshift({ copy, kind });
-        logs = logs.slice(0, 6);
+        logs = logs.slice(0, 12);
         const el = $("#action-log");
         if (el) el.innerHTML = logs.map((x) => `<span class="${x.kind}">${x.copy}</span>`).join("");
     }
@@ -335,6 +291,13 @@
         $("#event-type").textContent = item.type;
         $("#event-title").textContent = item.title;
         $("#event-copy").textContent = item.copy;
+        document.querySelectorAll(".targeted,.fired").forEach(n=>n.classList.remove("targeted","fired"));
+        if(item.effect){
+            const e=item.effect;
+            $("#effect-receipt").innerHTML=`<b>${e.ownerName} → ${e.targetName}</b><span>${e.name}</span><span>${e.copy}</span>`;
+            $(`.pos-${e.target}`)?.classList.add("targeted");
+            $(`[data-module="${e.id}"]`)?.classList.add("fired");
+        }
         setTimeout(() => {
             el.classList.add("out");
             setTimeout(() => {
@@ -352,7 +315,8 @@
         $("#action-player").textContent = player;
         $("#action-name").textContent = title;
         el.className = `action-pop ${kind}`;
-        cue(kind);
+        cue(title==="ALL-IN"?"allin":title.startsWith("RAISE")?"raise":title==="CHECK"?"check":title==="FOLD"?"fold":title==="CALL"?"call":kind);
+        if(kind==="attack") impact(kind);
         requestAnimationFrame(() => el.classList.add("show"));
         actionPopTimer = setTimeout(() => {
             el.classList.remove("show");
@@ -365,13 +329,14 @@
         mode = $("#mode").value;
         N = +$("#count").value;
         document.body.dataset.players = String(N);
+        const names=Array.from({length:N},(_,i)=>safeName(localNames[i],i));
         P = Array.from({
             length: N
         }, (_, i) => ({
             id: i,
-            name: `PLAYER_${String(i + 1).padStart(2, "0")}`,
+            name: mode==="solo"?(i===0?"あなた":`CPU ${i}`):names[i]+(names.filter(n=>n===names[i]).length>1?` (${i+1})`:""),
             human: mode === "local" || i === 0,
-            chips: 1000,
+            chips: 600,
             bet: 0,
             total: 0,
             folded: false,
@@ -409,39 +374,19 @@
         return x;
     }
 
-    function applyOpeningModules() {
-        P.forEach((owner) => {
-            if (owner.folded) return;
-            if (owner.mods.some((m) => m.id === "rebuy") && owner.chips < 200 && !owner.rebuyUsed) {
-                owner.chips += 100;
-                owner.rebuyUsed = true;
-                pushLog(`${owner.name} LIFE PATCH +100`, "guard");
-                announce("GUARD TRIGGER", "LIFE PATCH", `${owner.name}が100チップ回復`, "guard");
-            }
-            const target = P.find((p) => !p.folded && !p.human && p.id !== owner.id);
-            if (target && owner.mods.some((m) => m.id === "scramble")) {
-                const hi = target.hole[0].r >= target.hole[1].r ? 0 : 1;
-                target.hole[hi] = deck.pop();
-                pushLog(`${owner.name} → ${target.name} CARD SCRAMBLE`, "attack");
-                announce("ATTACK TRIGGER", "CARD SCRAMBLE", `${target.name}の高いカードを強制交換`, "attack");
-            }
-            if (target && owner.mods.some((m) => m.id === "silence")) {
-                target.silenced = true;
-                pushLog(`${target.name} RAISE LOCKED`, "attack");
-                announce("JAMMING", "RAISE LOCK", `${target.name}はプリフロップでレイズ不能`, "attack");
-            }
-        });
-    }
+    function applyOpeningModules() { const ctx=effectContext(); Rogue.opening(ctx); publishEffects(ctx); }
 
     function newHand() {
         if (active().length === 1) {
             finish(active()[0]);
             return;
         }
+        lastActionText="";
         handNo++;
+        $("#effect-receipt").innerHTML="";
         lastHoleKey = null;
         lastBoardKey = null;
-        level = Math.min(LEVELS.length - 1, Math.floor((handNo - 1) / 3));
+        level = Math.min(LEVELS.length - 1, Math.floor((handNo - 1) / 2));
         let [S, B] = LEVELS[level];
         dealer = next(dealer);
         sb = active().length === 2 ? dealer : next(dealer);
@@ -449,18 +394,20 @@
         deck = shuffle(makeDeck());
         board = [];
         P.forEach((p) => {
+            p.startChips=p.chips; p.payout=0; p.rank=null; p.bestCards=[];
             p.bet = p.total = 0;
             p.folded = p.chips <= 0;
+            p.participated = !p.folded;
             p.allin = false;
             p.silenced = false;
             p.shieldUsed = false;
             p.hole = p.folded ? [] : [deck.pop(), deck.pop()];
             p.last = p.folded ? "OUT" : "IN";
         });
+        applyOpeningModules();
         if (active().length >= 3) payAnte(P[bb], B);
         pay(P[sb], S);
         pay(P[bb], B);
-        applyOpeningModules();
         street = "pre";
         currentBet = P[bb].bet;
         minRaise = B;
@@ -497,8 +444,9 @@
             return;
         }
         if (mode === "local") {
+            $("#effect-receipt").innerHTML="";
             phase = "pass";
-            $("#pass-title").textContent = `PASS TO ${p.name}`;
+            $("#pass-title").textContent = `${p.name} の番です`;
             $("#pass").classList.remove("hidden");
             render();
         } else {
@@ -512,18 +460,10 @@
         let p = P[actor],
             beforeChips = p.chips,
             due = Math.max(0, currentBet - p.bet);
+        if (p.silenced && street === "pre" && (type === "raise" || (type === "allin" && p.chips > due))) return;
         if (type === "fold") {
             p.folded = true;
             p.last = "FOLD";
-            if (p.mods.some((m) => m.id === "insurance") && !p.shieldUsed) {
-                const refund = Math.min(LEVELS[level][1], p.total);
-                p.chips += refund;
-                p.total -= refund;
-                p.bet = Math.max(0, p.bet - refund);
-                p.shieldUsed = true;
-                pushLog(`${p.name} FOLD SHIELD +${refund}`, "guard");
-                announce("GUARD TRIGGER", "FOLD SHIELD", `${refund}チップを緊急回収`, "guard");
-            }
         } else if (type === "check" || type === "call") {
             pay(p, due);
             p.last = due ? "CALL" : "CHECK";
@@ -556,11 +496,18 @@
                 .map((x) => x.id),
             );
         }
+        const actionCtx=effectContext(); Rogue.action(actionCtx,p,type); publishEffects(actionCtx);
         pending.delete(p.id);
         if (p.chips < beforeChips) flyChips(p);
         const kind = type === "raise" || type === "allin" ? "attack" : "action";
         pushLog(`${p.name} / ${p.last}`, kind);
-        flashAction(p.last, p.name, kind);
+        const spent=Math.max(0,beforeChips-p.chips);
+        const actionDescriptions={fold:"勝負から降りました",check:"追加のチップなしで続けました",call:`${Math.min(due,beforeChips)}枚を出して続けました`,raise:`合計${p.bet}枚に増額しました`,allin:`残りのチップをすべて賭けました`};
+        lastActionText=`${p.name}が${actionDescriptions[type]}。所持 ${beforeChips} → ${p.chips}枚`;
+        pushLog(lastActionText,kind);
+        flashAction(p.last,p.name,kind);
+        $("#action-detail").textContent=type==="check"?"追加 0枚":type==="fold"?"この勝負は見送る":`所持 ${beforeChips} → ${p.chips}枚`;
+        if(spent) $("#action-detail").textContent+=`（−${spent}）`;
         phase = "transition";
         render();
         setTimeout(() => {
@@ -583,7 +530,7 @@
             phase = "transition";
             render();
             announce("BETTING CLOSED", "SHOWDOWN", "全員のホールカードを公開", "street", 1200);
-            setTimeout(showdown, 1050);
+            afterEffects(showdown);
             return;
         }
         P.forEach((p) => (p.bet = 0));
@@ -600,28 +547,20 @@
         } else if (street === "turn") {
             deck.pop();
             board.push(deck.pop());
-            if (live().some((p) => p.mods.some((m) => m.id === "sixboard"))) {
-                board.push(deck.pop());
-                pushLog("SIXTH STREET / BOARD +1", "chaos");
-                announce("RULE OVERRIDE", "SIXTH STREET", "リバーを2枚公開。8枚から最強の5枚を選択", "chaos", 1800);
-            }
             street = "river";
         }
+        $("#effect-receipt").innerHTML="";
+        const streetCtx=effectContext(); Rogue.street(streetCtx,street); publishEffects(streetCtx);
         pending = new Set(
             live()
             .filter((p) => !p.allin)
             .map((p) => p.id),
         );
         if (live().filter((p) => !p.allin).length <= 1) {
-            const targetBoard = live().some((p) => p.mods.some((m) => m.id === "sixboard")) ? 6 : 5;
-            while (board.length < targetBoard) {
-                deck.pop();
-                board.push(deck.pop());
-            }
             phase = "transition";
             render();
-            announce("ALL-IN RUNOUT", "NO MORE BETS", "残りのカードを自動公開", "attack", 1500);
-            setTimeout(showdown, 1300);
+            announce("ALL-IN RUNOUT", street.toUpperCase(), `${board.length}枚公開 / 能力を解決して次の場札へ`, "street", 1600);
+            afterEffects(advance);
             return;
         }
         actor = next(dealer, (p) => pending.has(p.id));
@@ -643,7 +582,7 @@
             roll = Math.random();
         p.tell = strength > 4 ? "STRONG" : strength > 1 ? "MIXED" : "WEAK";
         if (due > p.chips * 0.45 && strength < 2) act("fold");
-        else if (!p.silenced && strength >= 4 && roll > 0.45) {
+        else if (!(p.silenced && street === "pre") && strength >= 4 && roll > 0.45) {
             raiseTo = currentBet + minRaise * (1 + Math.floor(Math.random() * 3));
             act("raise");
         } else act(due ? "call" : "check");
@@ -658,7 +597,8 @@
         phase = "showdown";
         const awardedPot = pot();
         let eligible = live();
-        eligible.forEach((p) => (p.rank = handRank(p)));
+        const rankCtx=effectContext(); Rogue.rankEvents(rankCtx); publishEffects(rankCtx);
+        eligible.forEach(p=>{p.rank=handRank(p);p.bestCards=combos(Rogue.rankCards(p,board),5).sort((a,b)=>cmp(rank5(a),rank5(b))).at(-1);});
         let levels = [...new Set(P.map((p) => p.total).filter(Boolean))].sort(
                 (a, b) => a - b,
             ),
@@ -673,13 +613,14 @@
                 .at(-1),
                 wins = can.filter((p) => cmp(p.rank, best) === 0),
                 share = Math.floor(amount / wins.length);
-            wins.forEach((w) => (w.chips += share));
+            wins.forEach(w=>{w.chips+=share;w.payout+=share;});
             for (let r = 0; r < amount - share * wins.length; r++)
-                wins[r % wins.length].chips++;
+                {wins[r % wins.length].chips++;wins[r % wins.length].payout++;}
             if (!idx) main = wins;
             prev = lv;
         });
         mainWinner = main[0];
+        P.forEach(p=>p.handWon=main.includes(p));
         P.forEach((p) => (p.last = p.folded ? "FOLD" : p.rank.name));
         P.forEach((p) => {
             p.total = 0;
@@ -688,72 +629,105 @@
         render(true);
         const names = main.map((p) => p.name).join(" + ");
         pushLog(`${names} WIN / ${main[0].rank.name}`, "win");
-        announce("POT AWARDED", main[0].rank.name, `${names} +${awardedPot}`, "win", 2200);
+        const lost=mode==="solo"&&!main.some(p=>p.human);
+        announce("POT AWARDED / " + main[0].rank.name, lost?"OPPONENT WINS":"WIN +"+awardedPot.toLocaleString(), `${names} +${awardedPot} / ${lost?"あなたにも通常能力":"レア・伝説の能力を獲得"}`, lost?"defeat":"win", 3000);
         setTimeout(() => afterHand(main), 2400);
     }
 
     function awardUncontested(p) {
         const awardedPot = pot();
         p.chips += awardedPot;
+        p.payout=awardedPot;
         P.forEach((player) => {
             player.total = 0;
             player.bet = 0;
         });
         p.last = "POT WON";
         mainWinner = p;
+        P.forEach(q=>q.handWon=q===p);
         phase = "won";
         render();
         pushLog(`${p.name} UNCONTESTED WIN`, "win");
-        announce("ALL OTHERS FOLDED", "POT CAPTURED", `${p.name}がポットを獲得`, "win", 1700);
+        const lost=mode==="solo"&&!p.human;
+        announce("ALL OTHERS FOLDED", lost?"OPPONENT WINS":"WIN +"+awardedPot.toLocaleString(), `${p.name} +${awardedPot} / ${lost?"あなたにも通常能力":"レア・伝説の能力を獲得"}`, lost?"defeat":"win", 2800);
         setTimeout(() => afterHand([p]), 1850);
     }
 
-    function afterHand(w) {
-        let human = w.find((x) => x.human);
-        if (human) draft(human);
-        else newHand();
+    function afterHand(winners) {
+        afterEffects(()=>{
+            roundWinners=winners; phase="round-result";
+            const lost=mode==="solo"&&!winners.some(p=>p.human);
+            $("#round-eyebrow").textContent=`第${handNo}回 / 結果を確認してから次へ`;
+            $("#round-title").textContent=mode==="solo"?(lost?"あなたの負け":"あなたの勝ち！"):`${winners.map(p=>p.name).join("・")} の勝ち！`;
+            $("#round-result").dataset.outcome=lost?"lost":"won";
+            $("#round-summary").textContent=`勝者：${winners.map(p=>p.name).join("・")}。${winners[0].rank?roleName(winners[0].rank.name)+"で勝利。":"ほかの全員がFOLDしたため勝利。"}${lost?"負けても通常能力を1つ選べます。":"勝者にはレア・伝説の能力が出ます。"}`;
+            const runner=P.filter(p=>p.rank&&!winners.includes(p)).sort((a,b)=>cmp(b.rank,a.rank))[0];
+            if(runner && winners[0].rank.cat===runner.rank.cat){
+                const win=winners[0], k=win.rank.tie.findIndex((r,i)=>r!==runner.rank.tie[i]);
+                const label=r=>({14:"A",13:"K",12:"Q",11:"J"}[r]||r);
+                if(k>=0)$("#round-summary").textContent+=` 同じ役ですが、数字を順に比べた決め手は ${win.name}の${label(win.rank.tie[k])} ＞ ${runner.name}の${label(runner.rank.tie[k])} でした。`;
+            }
+            $("#round-board").innerHTML=board.length?`<small>全員共通の場札</small><div>${board.map((c,i)=>card(c,i)).join("")}</div>`:"";
+            $("#round-players").innerHTML=P.filter(p=>p.participated).map(p=>{
+                const delta=p.chips-p.startChips;
+                const hand=p.rank?p.bestCards.map((c,i)=>card(c,i)).join(""):"";
+                return `<article class="${p.handWon?"round-winner":""}"><header><b>${p.name}</b><strong>${p.handWon?"勝ち":p.payout>0?"サイドポット獲得":"負け"}</strong></header><h3>${p.rank?roleName(p.rank.name):p.folded?"FOLD — 勝負を降りた":"全員FOLDで勝利"}</h3><div class="result-hand">${hand||"<span>手札は非公開</span>"}</div>${p.rank?"<small>勝負した5枚（能力適用後）</small>":""}<p>所持 ${p.startChips} → <b>${p.chips}枚</b> <em>${delta>=0?"+":""}${delta}</em></p><small>ポットから獲得：${p.payout||0}枚</small>${p.rank?`<details><summary>元の手札を見る</summary><div class="result-hand">${p.hole.map((c,i)=>card(c,i)).join("")}</div></details>`:""}</article>`;
+            }).join("");
+            $("#round-result").classList.remove("hidden");
+            $("#turn-banner").innerHTML="<strong>今回の勝負が決まりました</strong><span>カードとチップの増減を確認してください</span>";
+        });
     }
-
-    function draft(p) {
-        let pool = mods.filter((m) => !p.mods.some((x) => x.id === m.id));
-        if (!pool.length) {
-            newHand();
-            return;
+    $("#to-rewards").onclick=()=>{
+        if(phase!=="round-result")return;
+        $("#round-result").classList.add("hidden");phase="transition";queueRewards(roundWinners);
+    };
+    function queueRewards(winners) {
+        afterEffects(() => {
+            const ctx=effectContext(); Rogue.result(ctx,winners.map(p=>p.id)); publishEffects(ctx);
+            rewardQueue=P.filter(p=>p.participated && p.human).map(p=>({p,won:winners.includes(p)}));
+            P.filter(p=>p.participated && !p.human).forEach(p=>{
+                const pool=Rogue.rewardPool(p,winners.includes(p));
+                if(pool.length) {const m=pool[Math.floor(Math.random()*pool.length)];p.mods.push({...m});pushLog(`${p.name} INSTALL ${m.name} / ${Rogue.tiers[m.tier]}`,m.cat);}
+            });
+            afterEffects(nextReward);
+        });
+    }
+    function nextReward() {
+        const reward=rewardQueue.shift();
+        if(!reward) {afterEffects(newHand);return;}
+        draft(reward.p,reward.won);
+    }
+    function draft(p,won) {
+        const pool=Rogue.rewardPool(p,won);
+        if(!pool.length) {
+            p.chips+=won?80:20;
+            pushLog(`${p.name} / 全能力取得済み → +${won?80:20}`,"guard");
+            nextReward(); return;
         }
-        offers = [...pool].sort(() => Math.random() - 0.5).slice(0, 3);
-        phase = "draft";
-        $("#relic-title").textContent = `${p.name} / MODULE`;
-        $("#relic-cards").innerHTML = offers
-            .map(
-                (m, i) =>
-                `<button data-i="${i}" class="mod-${m.cat}"><span>${CAT[m.cat]}</span><i>${m.icon}</i><h3>${m.name}</h3><p>${m.desc}</p><em>SELECT MODULE_0${i + 1}</em></button>`,
-            )
-            .join("");
-        $("#relic-cards")
-            .querySelectorAll("button")
-            .forEach((b) => (b.onclick = () => choose(p, +b.dataset.i)));
+        offers=shuffle([...pool]).slice(0,3);
+        rewardOwner=p; phase="draft"; deadline=0;
+        $("#relic-title").textContent = `${p.name}、能力を1つ選ぼう`;
+        $("#relic .eyebrow").textContent=won?"勝利報酬 / レア・伝説":"敗北報酬 / 通常 — 次の勝負で役立てよう";
+        $("#draft-time").textContent="時間制限なし";
+        $("#relic-cards").innerHTML=offers.map((m,i)=>`<button data-i="${i}" data-tier="${m.tier}" class="mod-${m.cat}"><span>${CAT[m.cat]} · <b class="rarity">${Rogue.tiers[m.tier]}</b></span><i>${m.icon}</i><h3>${m.name}</h3><p>${m.desc}</p><em>この能力をもらう →</em></button>`).join("");
+        $("#relic-cards").querySelectorAll("button").forEach(b=>b.onclick=()=>choose(p,+b.dataset.i));
         $("#relic").classList.remove("hidden");
-        deadline = performance.now() + 18000;
-        announce("ROGUE REWARD", "MODULE DRAFT", "勝者は能力を1つインストール", "win", 1800);
     }
-
-    function choose(p, i) {
-        if (!offers[i]) return;
-        const picked = offers[i];
-        p.mods.push({ ...picked });
-        $("#relic").classList.add("hidden");
-        phase = "transition";
-        pushLog(`${p.name} INSTALL ${picked.name}`, picked.cat);
-        announce(CAT[picked.cat], picked.name, picked.desc, picked.cat, 2000);
+    function choose(p,i) {
+        if(phase!=="draft" || p!==rewardOwner || !offers[i])return;
+        const picked=offers[i]; offers=[];
+        p.mods.push({...picked}); $("#relic").classList.add("hidden"); phase="transition";
+        pushLog(`${p.name} INSTALL ${picked.name} / ${Rogue.tiers[picked.tier]}`,picked.cat);
+        announce("INSTALLED / "+Rogue.tiers[picked.tier],picked.name,picked.desc,picked.cat,1800);
         render();
-        setTimeout(newHand, 2100);
+        afterEffects(nextReward);
     }
 
     function finish(p) {
         phase = "ended";
-        $("#winner").textContent = `${p.name} WINS`;
+        $("#winner").textContent = `${p.name} の総合優勝！`;
         $("#result-copy").textContent =
-            `${handNo} HANDS / ${p.chips} CHIPS / TDA CORE`;
+            `${handNo}回の勝負 / 最終チップ ${p.chips}枚`;
         $("#result").classList.remove("hidden");
         render();
     }
@@ -793,7 +767,7 @@
         }
         $("#seats").innerHTML = P.map(
             (p, i) =>
-            `<article class="h-seat pos-${i} ${i === actor && (phase === "act" || phase === "cpu") ? "acting" : ""} ${p.folded ? "folded" : ""} ${show && !p.folded ? "showing" : ""}"><div class="avatar">${i + 1}</div><header><b>${p.name}</b><span>${i === dealer ? "D " : ""}${i === sb ? "SB " : ""}${i === bb ? "BB" : ""}</span></header><div class="seat-bank"><span class="mini-chip chip-c${i % 4}"></span><strong>${p.chips}</strong></div><small>${p.last}</small><div class="seat-mods">${p.mods.map((m) => `<i class="${m.cat}" title="${m.name}">${m.icon}</i>`).join("")}</div><div class="tiny-cards">${show && !p.folded ? p.hole.map((c, j) => card(c, j)).join("") : p.hole.map((_, j) => card(null, j, true)).join("")}</div></article>`,
+            `<article class="h-seat pos-${i} ${i === actor && (phase === "act" || phase === "cpu") ? "acting" : ""} ${p.folded ? "folded" : ""} ${show && !p.folded ? "showing" : ""}"><div class="avatar">${i + 1}</div><header><b>${p.name}</b><span>${i === dealer ? "D " : ""}${i === sb ? "SB " : ""}${i === bb ? "BB" : ""}</span></header><div class="seat-bank"><span class="mini-chip chip-c${i % 4}"></span><strong>${p.chips}</strong></div><small>${p.last}</small><div class="seat-mods">${p.mods.map((m) => `<i class="${m.cat}" title="${m.name}">${m.icon}</i>`).join("")}</div><div class="tiny-cards">${show && !p.folded ? p.hole.map((c, j) => card(c, j)).join("") : p.hole.map((c, j) => p.exposed && j === 0 ? card(c,j) : card(null, j, true)).join("")}</div></article>`,
         ).join("");
         const actionPlayer = P[actor] || P[0];
         const viewer = mode === "solo" ? P[0] : actionPlayer;
@@ -808,11 +782,11 @@
                 card(null, 0, true) + card(null, 1, true);
             lastHoleKey = holeKey;
         }
-        $("#active-name").textContent = `${viewer?.name || "TABLE"} / YOUR CARDS`;
+        $("#active-name").textContent = `${viewer?.name || "あなた"} の手札`;
         $("#turn-info").textContent = phase === "showdown" ?
             "CARDS REVEALED" :
             phase === "won" ?
-            "HAND WON" :
+            (viewer?.handWon?"HAND WON / RARE REWARD":"HAND LOST / COMMON REWARD") :
             phase === "transition" ?
             "RESOLVING..." :
             `${actionPlayer?.name || "TABLE"} TO ACT`;
@@ -820,8 +794,8 @@
         $(".active-pod").dataset.active = String(canAct);
         document.querySelectorAll(".h-seat").forEach((seat, i) => { seat.hidden = i === viewer?.id; });
         $("#checkcall").innerHTML = due ?
-            `コール <small>CALL ${Math.min(due, actionPlayer.chips)}</small>` :
-            "チェック <small>CHECK / 追加なし</small>";
+            `CALL <small>${Math.min(due, actionPlayer.chips)}</small>` :
+            "CHECK";
         $("#raise-value").textContent = raiseTo;
         const stackEl = $("#viewer-chips");
         const nextStack = (viewer?.chips || 0).toLocaleString("ja-JP");
@@ -838,36 +812,34 @@
         ["fold", "checkcall", "raise", "allin", "minus", "plus"].forEach(
             (id) => ($("#" + id).disabled = !canAct),
         );
+        const locked=canAct && actionPlayer.silenced && street==="pre";
+        ["raise","minus","plus"].forEach(id=>$("#"+id).disabled=!canAct || locked);
+        $("#allin").disabled=!canAct || (locked && actionPlayer.chips>due);
+        if(locked) $("#turn-info").textContent="あなたの番 / この回の増額は禁止";
         let rank =
-            (phase === "showdown" || viewer?.mods.some((m) => m.id === "scan")) && board.length >= 3 ?
+            (phase === "showdown" || (!viewer?.fogged && viewer?.mods.some((m) => m.id === "scan"))) && board.length >= 3 ?
             handRank(viewer).name :
             "—";
         $("#hand-name").textContent = rank;
-        let data = [];
-        if (viewer?.mods.some((m) => m.id === "odds") && due)
-            data.push(`POT ODDS ${Math.round((due / (pot() + due)) * 100)}%`);
-        if (viewer?.mods.some((m) => m.id === "tell"))
-            data.push(
-                P.filter((x) => !x.human && x.tell)
-                .map((x) => `${x.name}:${x.tell}`)
-                .join(" "),
-            );
-        if (viewer?.mods.some((m) => m.id === "map") && LEVELS[level + 1])
-            data.push(`NEXT ${LEVELS[level + 1][0]}/${LEVELS[level + 1][1]}`);
-        $("#module-readout").textContent =
-            data.filter(Boolean).join(" / ") || "NO MODULE DATA";
-        $("#module-tray").innerHTML = viewer?.mods.length ?
-            viewer.mods.map((m) => `<span class="mod-chip ${m.cat}"><b>${m.icon}</b>${m.name}</span>`).join("") :
-            `<span class="empty">MODULE SLOT / EMPTY — ハンド勝利で獲得</span>`;
+        const data=viewer && canSee?Rogue.readout(viewer,{players:P,due:Math.max(0,currentBet-viewer.bet),pot:pot(),handName:rank!=="—"?rank:null,nextBlinds:LEVELS[level+1]?.join("/"),untilLevel:2-(handNo-1)%2}):[];
+        $("#module-readout").textContent=data.join(" / ") || "NO MODULE DATA";
+        $("#module-tray").innerHTML=viewer?.mods.length?viewer.mods.map(m=>`<button class="mod-chip ${m.cat}" data-module="${m.id}" title="${m.desc}"><b>${m.icon}</b>${m.name}<span>${viewer.fired?.[m.id]?"✓":""}</span></button>`).join(""):`<span class="empty">能力32種類 / 勝つとレア・伝説、負けても通常能力</span>`;
+        if(data.length) $("#module-tray").insertAdjacentHTML("afterbegin",`<span class="live-readout">${data.join(" · ")}</span>`);
+        $("#module-tray").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+            const m=mods.find(m=>m.id===b.dataset.module);
+            $("#effect-receipt").innerHTML=`<b>${m.name} / ${Rogue.tiers[m.tier]}</b><span>${m.desc}</span><span>${viewer.fired?.[m.id]||"条件成立時に自動発動"}${m.cat==="info"?" / "+(data.join(" · ")||"待機中"):""}</span>`;
+        });
         ["pre", "flop", "turn", "river"].forEach((s) =>
             $("#s-" + s)?.classList.toggle("on", street === s),
         );
-        $("#table-msg").textContent =
-            street === "showdown" ?
-            "SHOWDOWN" :
-            phase === "won" ?
-            "POT CAPTURED" :
-            `${street.toUpperCase()} / ${actionPlayer?.name || ""} TO ACT`;
+        const phaseName=({pre:"手札で勝負",flop:"場札3枚",turn:"場札4枚",river:"最後の場札",showdown:"カードを公開"})[street]||"";
+        const whose=actionPlayer?.name||"";
+        const heading=phase==="act"||phase==="cpu"||phase==="pass"?`${whose} の番`:phase==="transition"?"アクションの結果":phase==="draft"?"能力を選んでください":"今回の勝負の結果";
+        const instruction=phase==="act"?(locked?"増額を止められています。CHECK / CALL / FOLDから選ぼう。":due?`続けるには${Math.min(due,actionPlayer.chips)}枚。CALLで続行、RAISEで増額、FOLDで降ります。`:"CHECKは追加0枚。RAISEならチップを追加して勝負できます。"):phase==="cpu"?`${whose} が考えています。操作せずに待ってください。`:phase==="pass"?"その人に端末を渡してから、手札を開いてください。":phase==="transition"?(lastActionText||"カードを配っています。自分の番までお待ちください。"):"勝敗と報酬を確認しましょう。";
+        $("#turn-banner").innerHTML=`<strong>${heading}</strong><span>${instruction}</span>`;
+        $("#turn-banner").dataset.your=String(canAct);
+        $("#turn-info").textContent=heading;
+        $("#table-msg").textContent=`第${handNo}回 / ${phaseName}`;
         $("#message").textContent =
             phase === "pass" ?
             "PRIVATE HANDOFF" :
@@ -942,7 +914,7 @@
     dlg.querySelector(".close").onclick = () => dlg.close();
 
     function tick(t) {
-        if (phase === "draft") {
+        if (phase === "draft" && deadline > 0) {
             let s = Math.max(0, Math.ceil((deadline - t) / 1000));
             $("#draft-time").textContent = s;
             if (!s) choose(mainWinner, 0);

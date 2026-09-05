@@ -36,3 +36,6 @@ test('sixth-street module can choose five from eight cards', () => {
   assert.equal(combos(hand,5).length,56);
   assert.equal(best7(hand).name,'ROYAL FLUSH');
 });
+test('explicit rogue rank rewriting supports five of a kind without crashing',()=>{
+ const hand=Array.from({length:5},()=>({r:14,s:'♥'}));assert.equal(rank5(hand).name,'FIVE OF A KIND');assert.equal(rank5(hand).cat,9);
+});

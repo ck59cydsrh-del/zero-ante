@@ -1,4 +1,40 @@
-# Circuit edition — current
+# Beginner clarity edition — current
+
+Circuit ornaments are removed. A continuous green table puts readable turn guidance above
+the opponents and the player controls within the lower edge. Desktop pot and community
+cards share a row, avoiding opponent overlap. Persistent results show winner, best five
+cards and chip deltas. Japanese ability names describe their actions. Local names are
+editable; a 600-chip stack and 25/50 blinds increasing every two hands accelerate play.
+CHECK, FOLD, CALL, RAISE and ALL-IN each have a distinct optional synthesized cue.
+
+## Earlier Overdrive foundation (circuit styling superseded)
+
+The entire match now lives on one green circuit table. No separate sidebar: the player's
+cards, stack, action receipt and English betting controls form the lower edge of the table.
+The lower circuit is occluded behind controls to avoid drawing through text. Diamonds have
+a narrow stepped silhouette; clubs use three separate lobes and a defined stem.
+
+32 modules live in rogue.js, a browser/CommonJS engine shared by the UI and tests.
+All participants earn a reward: winners draw tiers 2–3 and losers tier 1. CPU rewards use
+the same pools; local human rewards are queued individually. Choice has no time limit.
+Owned modules are excluded; exhausted pools convert to a stated chip bonus.
+
+Effect receipts include source, target and actual result; installed module buttons expose
+the description and last trigger. Information modules expose live readouts. Guard jamming
+resolves first; human opponents are valid targets. All-in runout resolves street-by-street
+so flop and river abilities execute. Rank rewriting explicitly permits five-of-a-kind.
+This is a custom rogue variant, not a claim of complete official-tournament compliance.
+
+Sound uses optional bounded-gain synthesis: short check tick, pitch-dropping attack bass,
+and rising victory arpeggio. Win effects have longer hold, more particles and circuit bloom.
+Reduced-motion preferences suppress particle movement; sound defaults OFF.
+
+Automated verification: 48 tests, including all 32 module implementations, payout-side
+effects, reward eligibility, jam/fog, once-per-hand triggers, all-in lock and rank variants.
+Browser: loser COMMON selection, winner RARE selection, CPU jammer disabling both raise
+and over-call all-in, and restoration at flop. Further QA is recorded in the handoff.
+
+## Circuit edition — previous
 
 The new references drive a PCB-green play surface with cream circuit traces around
 its perimeter, a paper/black control panel, orange action emphasis, and bold editorial
