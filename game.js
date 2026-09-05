@@ -42,7 +42,8 @@
         logs = [],
         fxQueue = [],
         fxBusy = false,
-        actionPopTimer = 0;
+        actionPopTimer = 0,
+        actionHideTimer = 0;
 
     function setTheme(value, remember = true) {
         const theme = value === "dark" ? "dark" : "light";
@@ -302,14 +303,15 @@
     function flashAction(title, player, kind = "action") {
         const el = $("#action-pop");
         clearTimeout(actionPopTimer);
+        clearTimeout(actionHideTimer);
         $("#action-player").textContent = player;
         $("#action-name").textContent = title;
         el.className = `action-pop ${kind}`;
         requestAnimationFrame(() => el.classList.add("show"));
         actionPopTimer = setTimeout(() => {
             el.classList.remove("show");
-            setTimeout(() => el.classList.add("hidden"), 320);
-        }, 900);
+            actionHideTimer = setTimeout(() => el.classList.add("hidden"), 320);
+        }, 1200);
     }
 
     function init() {
@@ -431,6 +433,12 @@
     }
 
     function showActor(first = false) {
+        if (fxBusy || fxQueue.length) {
+            phase = "transition";
+            render();
+            setTimeout(() => showActor(first), 120);
+            return;
+        }
         if (!pending.size) {
             advance();
             return;
@@ -718,12 +726,21 @@
         $("#pot").textContent = String(pot()).padStart(4, "0");
         const boardKey = board.map((c) => `${c.s}${c.r}`).join("|");
         if (boardKey !== lastBoardKey) {
-            $("#board").innerHTML =
-                board.map((c, i) => card(c, i)).join("") +
-                Array(Math.max(0, (live().some((p) => p.mods.some((m) => m.id === "sixboard")) ? 6 : 5) - board.length))
-                .fill(0)
-                .map((_, i) => card(null, i, true))
-                .join("");
+            const container = $("#board");
+            const count = live().some((p) => p.mods.some((m) => m.id === "sixboard")) ? 6 : 5;
+            for (let i = 0; i < count; i++) {
+                const c = board[i];
+                const key = `${handNo}:${c ? c.s + c.r : "back"}`;
+                const previous = container.children[i];
+                if (previous?.dataset.cardKey === key) continue;
+                const template = document.createElement("template");
+                template.innerHTML = card(c, i, !c);
+                const node = template.content.firstElementChild;
+                node.dataset.cardKey = key;
+                if (previous) previous.replaceWith(node);
+                else container.appendChild(node);
+            }
+            while (container.children.length > count) container.lastElementChild.remove();
             lastBoardKey = boardKey;
         }
         $("#seats").innerHTML = P.map(
@@ -836,7 +853,7 @@
     });
     $("#theme-toggle").onclick = () => setTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
     window.addEventListener("keydown", (e) => {
-        if (e.code === "Space" && phase === "setup") {
+        if (e.code === "Space" && phase === "setup" && !e.target.closest("button,input,select")) {
             e.preventDefault();
             init();
         }

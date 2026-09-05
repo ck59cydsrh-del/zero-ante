@@ -3,14 +3,14 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="theme-color" content="#f6f5f0">
     <meta name="description" content="国際トーナメント基準の2～6人ノーリミット・テキサスホールデム。">
     <meta property="og:title" content="ZERO//ANTE — TOURNAMENT HOLD'EM">
     <meta property="og:description" content="TDA準拠のポーカーと、判断を拡張するローグライク・モジュール。">
     <meta property="og:image" content="https://odd-even-rogue-duel.yuhgamiya.chatgpt.site/og.png">
     <title>ZERO//ANTE — TOURNAMENT HOLD'EM</title>
-    <link rel="stylesheet" href="style.css?v=13">
+    <link rel="stylesheet" href="style.css?v=14">
 </head>
 
 <body data-theme="light">
@@ -21,7 +21,7 @@
             <div class="header-tools"><button id="theme-toggle" type="button" aria-label="表示色を切り替える"><i></i><span>WHITE</span></button><div class="run"><span>LEVEL</span><b id="level">01</b></div></div>
         </header>
         <section class="game">
-            <div class="table-noise"></div>
+            <div class="table-noise"></div><div class="ink-table" aria-hidden="true"></div><div class="table-edition" aria-hidden="true">THE UNPREDICTABLE TABLE / 001</div>
             <div class="genre-key"><span class="info">INFO</span><span class="attack">ATTACK</span><span class="guard">GUARD</span><span class="chaos-key">CHAOS</span></div>
             <aside class="action-feed"><b>LIVE FEED</b><div id="action-log"><span>テーブルを準備中...</span></div></aside>
             <div id="event-fx" class="event-fx hidden" aria-live="assertive"><small id="event-type">SYSTEM</small><strong id="event-title">ROUND START</strong><span id="event-copy"></span></div>
@@ -50,9 +50,9 @@
                     <div class="raise-control"><button id="minus">−</button><b id="raise-value">40</b><button id="plus">＋</button></div><button id="raise">RAISE TO</button><button id="allin" class="red">ALL-IN</button>
                 </div>
             </div>
-            <div id="setup" class="modal setup"><span class="eyebrow">ZA–01 / POCKET POKER SYSTEM</span>
-                <h1>ZERO<br>ANTE<span>運を配る。ルールを壊す。</span></h1>
-                <div class="setup-art" aria-hidden="true"><div class="art-label">NO LIMIT.<br>NEW POSSIBILITIES.</div><div class="art-card ac-one"><b>A</b><span>♠</span></div><div class="art-card ac-two"><b>A</b><span>♥</span></div><div class="art-caption">52 CARDS / ∞ COMBINATIONS</div></div>
+            <div id="setup" class="modal setup"><span class="eyebrow">ZERO ANTE / ROGUE POKER CLUB</span>
+                <h1>ZERO<span class="title-second">ANTE<span class="title-dot">.</span></span><span class="title-caption">その一手で、流れを変える。</span></h1>
+                <div class="setup-art" aria-hidden="true"><div class="art-label">A STUDY<br>IN CHANCE.</div><div class="art-caption">001 — THE UNPREDICTABLE TABLE</div></div>
                 <div class="setup-grid"><label>PLAY MODE<select id="mode">
                             <option value="solo">1 PLAYER + CPU</option>
                             <option value="local">LOCAL PLAYERS</option>
@@ -63,9 +63,9 @@
                             <option>5</option>
                             <option>6</option>
                         </select></label></div>
-                <fieldset class="theme-picker"><legend>CABINET COLOR</legend><label><input type="radio" name="theme" value="light" checked><span><i></i>WHITE</span></label><label><input type="radio" name="theme" value="dark"><span><i></i>BLACK</span></label></fieldset>
+                <fieldset class="theme-picker"><legend>APPEARANCE / 表示色</legend><label><input type="radio" name="theme" value="light" checked><span><i></i>WHITE</span></label><label><input type="radio" name="theme" value="dark"><span><i></i>BLACK</span></label></fieldset>
                 <div class="quick-guide"><span><b>1</b> 自分だけが見る2枚</span><span><b>2</b> CHECK / CALL / RAISE</span><span><b>3</b> 場の5枚と合わせる</span><span><b>4</b> 最強の5枚で勝負</span></div>
-                <p>1,000チップからスタート。ポーカーで勝ち、能力を選び、次のハンドを変える。</p><button id="start">テーブルを開く <kbd>↵ PLAY</kbd></button>
+                <p>ポーカーに、予測不能の一滴を。<br>勝つたびに能力を選び、次のハンドを変える。</p><button id="start">席につく <kbd>PLAY →</kbd></button>
             </div>
             <div id="pass" class="modal pass hidden"><span class="eyebrow">ONE PLAYER TO A HAND</span>
                 <h2 id="pass-title">PASS TO PLAYER 02</h2>
@@ -97,7 +97,7 @@
             <p><b class="chaos-key">CHAOS</b>6枚目の場札など、その試合だけルールを改変。</p>
         </div><small>2024 Poker TDA rules used as procedural reference. Rogue modules are explicit game variants and are announced before they resolve.</small>
     </dialog>
-    <script src="game.js?v=13"></script>
+    <script src="game.js?v=14"></script>
 </body>
 
 </html>
