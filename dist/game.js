@@ -728,7 +728,7 @@
         }
         $("#seats").innerHTML = P.map(
             (p, i) =>
-            `<article class="h-seat pos-${i} ${i === actor && phase === "act" ? "acting" : ""} ${p.folded ? "folded" : ""} ${show && !p.folded ? "showing" : ""}"><div class="avatar">${i + 1}</div><header><b>${p.name}</b><span>${i === dealer ? "D " : ""}${i === sb ? "SB " : ""}${i === bb ? "BB" : ""}</span></header><div class="seat-bank"><span class="mini-chip chip-c${i % 4}"></span><strong>${p.chips}</strong></div><small>${p.last}</small><div class="seat-mods">${p.mods.map((m) => `<i class="${m.cat}" title="${m.name}">${m.icon}</i>`).join("")}</div><div class="tiny-cards">${show && !p.folded ? p.hole.map((c, j) => card(c, j)).join("") : p.hole.map((_, j) => card(null, j, true)).join("")}</div></article>`,
+            `<article class="h-seat pos-${i} ${i === actor && (phase === "act" || phase === "cpu") ? "acting" : ""} ${p.folded ? "folded" : ""} ${show && !p.folded ? "showing" : ""}"><div class="avatar">${i + 1}</div><header><b>${p.name}</b><span>${i === dealer ? "D " : ""}${i === sb ? "SB " : ""}${i === bb ? "BB" : ""}</span></header><div class="seat-bank"><span class="mini-chip chip-c${i % 4}"></span><strong>${p.chips}</strong></div><small>${p.last}</small><div class="seat-mods">${p.mods.map((m) => `<i class="${m.cat}" title="${m.name}">${m.icon}</i>`).join("")}</div><div class="tiny-cards">${show && !p.folded ? p.hole.map((c, j) => card(c, j)).join("") : p.hole.map((_, j) => card(null, j, true)).join("")}</div></article>`,
         ).join("");
         const actionPlayer = P[actor] || P[0];
         const viewer = mode === "solo" ? P[0] : actionPlayer;

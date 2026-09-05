@@ -10,7 +10,7 @@
     <meta property="og:description" content="TDA準拠のポーカーと、判断を拡張するローグライク・モジュール。">
     <meta property="og:image" content="https://odd-even-rogue-duel.yuhgamiya.chatgpt.site/og.png">
     <title>ZERO//ANTE — TOURNAMENT HOLD'EM</title>
-    <link rel="stylesheet" href="style.css?v=12">
+    <link rel="stylesheet" href="style.css?v=13">
 </head>
 
 <body data-theme="light">
@@ -50,8 +50,9 @@
                     <div class="raise-control"><button id="minus">−</button><b id="raise-value">40</b><button id="plus">＋</button></div><button id="raise">RAISE TO</button><button id="allin" class="red">ALL-IN</button>
                 </div>
             </div>
-            <div id="setup" class="modal setup"><span class="eyebrow">TDA CORE / TABLE SETUP</span>
-                <h1>ZERO//ANTE<span>ROGUE HOLD'EM</span></h1>
+            <div id="setup" class="modal setup"><span class="eyebrow">ZA–01 / POCKET POKER SYSTEM</span>
+                <h1>ZERO<br>ANTE<span>運を配る。ルールを壊す。</span></h1>
+                <div class="setup-art" aria-hidden="true"><div class="art-label">NO LIMIT.<br>NEW POSSIBILITIES.</div><div class="art-card ac-one"><b>A</b><span>♠</span></div><div class="art-card ac-two"><b>A</b><span>♥</span></div><div class="art-caption">52 CARDS / ∞ COMBINATIONS</div></div>
                 <div class="setup-grid"><label>PLAY MODE<select id="mode">
                             <option value="solo">1 PLAYER + CPU</option>
                             <option value="local">LOCAL PLAYERS</option>
@@ -64,7 +65,7 @@
                         </select></label></div>
                 <fieldset class="theme-picker"><legend>CABINET COLOR</legend><label><input type="radio" name="theme" value="light" checked><span><i></i>WHITE</span></label><label><input type="radio" name="theme" value="dark"><span><i></i>BLACK</span></label></fieldset>
                 <div class="quick-guide"><span><b>1</b> 自分だけが見る2枚</span><span><b>2</b> CHECK / CALL / RAISE</span><span><b>3</b> 場の5枚と合わせる</span><span><b>4</b> 最強の5枚で勝負</span></div>
-                <p>各プレイヤー1,000チップ。勝つたびに能力を獲得。情報・妨害・防御・ルール改変が次のハンドから自動発動します。</p><button id="start">ゲームを始める <kbd>SPACE</kbd></button>
+                <p>1,000チップからスタート。ポーカーで勝ち、能力を選び、次のハンドを変える。</p><button id="start">テーブルを開く <kbd>↵ PLAY</kbd></button>
             </div>
             <div id="pass" class="modal pass hidden"><span class="eyebrow">ONE PLAYER TO A HAND</span>
                 <h2 id="pass-title">PASS TO PLAYER 02</h2>
@@ -96,7 +97,7 @@
             <p><b class="chaos-key">CHAOS</b>6枚目の場札など、その試合だけルールを改変。</p>
         </div><small>2024 Poker TDA rules used as procedural reference. Rogue modules are explicit game variants and are announced before they resolve.</small>
     </dialog>
-    <script src="game.js?v=12"></script>
+    <script src="game.js?v=13"></script>
 </body>
 
 </html>
