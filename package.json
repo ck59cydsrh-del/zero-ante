@@ -4,6 +4,6 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "python3 -m http.server 4173",
-    "build": "mkdir -p dist && cp index.html game.js og.png ink-art.png dist/ && cat style.css holdem.css clarity.css polish.css arena.css luxury.css sprite.css te.css instrument.css ink.css > dist/style.css"
+    "build": "mkdir -p dist && cp index.html game.js og.png circuit-frame.svg dist/ && cp circuit.css dist/style.css"
   }
 }

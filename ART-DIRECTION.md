@@ -1,4 +1,21 @@
-# Liquid edition
+# Circuit edition — current
+
+The new references drive a PCB-green play surface with cream circuit traces around
+its perimeter, a paper/black control panel, orange action emphasis, and bold editorial
+type. The circuit geometry is original and contains no copied logo or text. Pixel suits
+remain red/black. A single circuit.css replaces the previous layered production styles.
+
+Actions occupy a reserved row beneath the hand, avoiding layout jumps. Betting sends
+chips from the acting player to the pot; announcements pulse the circuit and significant
+events emit a brief particle burst. Optional synthesized sound starts OFF. Reduced-motion
+preferences suppress chip flight and particles and shorten other animations.
+
+Validated: six-player solo call, two-player flop/all-in/uncontested award and reward
+screen, 844 × 390 landscape controls, 1440 × 900 desktop, black/white and sound toggles.
+Eight hand-evaluator checks pass. No browser console errors observed in the tested flow.
+These checks do not establish full official tournament-rule compliance.
+
+## Previous liquid edition (archived direction)
 
 The supplied reference informed cobalt ink, tactile paper, generous negative space,
 and restrained editorial labels. The artwork is original, with no copied text or marks.

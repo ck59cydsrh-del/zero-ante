@@ -65,6 +65,49 @@
 
     try { setTheme(localStorage.getItem("zero-ante-theme") || "light", false); }
     catch (_) { setTheme("light", false); }
+    let soundEnabled = false, audioContext;
+    function cue(kind) {
+        if (!soundEnabled || !audioContext) return;
+        const notes = kind === "win" ? [440, 554, 659, 880] : kind === "attack" ? [165, 330] : [420, 560];
+        notes.forEach((frequency, i) => {
+            const oscillator = audioContext.createOscillator(), gain = audioContext.createGain();
+            const t = audioContext.currentTime + i * .075;
+            oscillator.type = "triangle";
+            oscillator.frequency.value = frequency;
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(.035, t + .008);
+            gain.gain.exponentialRampToValueAtTime(.001, t + .16);
+            oscillator.connect(gain).connect(audioContext.destination);
+            oscillator.start(t); oscillator.stop(t + .18);
+        });
+    }
+    function impact(kind) {
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        const table = $(".circuit-table");
+        table.classList.remove("pulse", "win-pulse");
+        requestAnimationFrame(() => table.classList.add(kind === "win" ? "win-pulse" : "pulse"));
+        if (kind !== "win" && kind !== "attack" && kind !== "chaos") return;
+        const area = $(".game").getBoundingClientRect(), center = $("#pot").getBoundingClientRect();
+        for (let i = 0; i < 18; i++) {
+            const spark = document.createElement("i"), angle = i * Math.PI / 9;
+            spark.className = "spark";
+            spark.style.cssText = `--cx:${center.x + center.width / 2 - area.x}px;--cy:${center.y + center.height / 2 - area.y}px;--tx:${Math.cos(angle) * 160}px;--ty:${Math.sin(angle) * 115}px`;
+            $("#burst").append(spark); setTimeout(() => spark.remove(), 1100);
+        }
+    }
+    function flyChips(player) {
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        const area = $(".game").getBoundingClientRect();
+        const source = (player.human ? $("#viewer-chips") : $(`.pos-${player.id} .seat-bank`))?.getBoundingClientRect();
+        const target = $("#pot").getBoundingClientRect();
+        if (!source) return;
+        for (let i = 0; i < 4; i++) {
+            const chip = document.createElement("i");
+            chip.className = "flying-chip";
+            chip.style.cssText = `--from-x:${source.x + source.width / 2 - area.x}px;--from-y:${source.y - area.y}px;--dx:${target.x + target.width / 2 - source.x - source.width / 2}px;--dy:${target.y + target.height / 2 - source.y}px;--delay:${i * .055}s`;
+            $("#chip-flight").append(chip); setTimeout(() => chip.remove(), 1100);
+        }
+    }
     const mods = [{
             id: "odds",
             icon: "%POT",
@@ -285,6 +328,8 @@
             return;
         }
         fxBusy = true;
+        cue(item.kind);
+        impact(item.kind);
         const el = $("#event-fx");
         el.className = `event-fx ${item.kind}`;
         $("#event-type").textContent = item.type;
@@ -307,6 +352,7 @@
         $("#action-player").textContent = player;
         $("#action-name").textContent = title;
         el.className = `action-pop ${kind}`;
+        cue(kind);
         requestAnimationFrame(() => el.classList.add("show"));
         actionPopTimer = setTimeout(() => {
             el.classList.remove("show");
@@ -464,6 +510,7 @@
     function act(type) {
         if (phase !== "act" && phase !== "cpu") return;
         let p = P[actor],
+            beforeChips = p.chips,
             due = Math.max(0, currentBet - p.bet);
         if (type === "fold") {
             p.folded = true;
@@ -510,6 +557,7 @@
             );
         }
         pending.delete(p.id);
+        if (p.chips < beforeChips) flyChips(p);
         const kind = type === "raise" || type === "allin" ? "attack" : "action";
         pushLog(`${p.name} / ${p.last}`, kind);
         flashAction(p.last, p.name, kind);
@@ -769,9 +817,11 @@
             "RESOLVING..." :
             `${actionPlayer?.name || "TABLE"} TO ACT`;
         let due = Math.max(0, currentBet - (actionPlayer?.bet || 0));
-        $("#checkcall").textContent = due ?
-            `CALL ${Math.min(due, actionPlayer.chips)}` :
-            "CHECK";
+        $(".active-pod").dataset.active = String(canAct);
+        document.querySelectorAll(".h-seat").forEach((seat, i) => { seat.hidden = i === viewer?.id; });
+        $("#checkcall").innerHTML = due ?
+            `コール <small>CALL ${Math.min(due, actionPlayer.chips)}</small>` :
+            "チェック <small>CHECK / 追加なし</small>";
         $("#raise-value").textContent = raiseTo;
         const stackEl = $("#viewer-chips");
         const nextStack = (viewer?.chips || 0).toLocaleString("ja-JP");
@@ -832,7 +882,7 @@
             "ACTION REQUIRED";
         const guide = $("#guidance");
         if (phase === "cpu") {
-            guide.innerHTML = `<b>WAIT</b><span>CPUのアクション中。あなたのカードは下に表向きで固定表示されています。</span>`;
+            guide.innerHTML = `<b>相手の番</b><span>${actionPlayer.name} が考えています。</span>`;
         } else if (phase === "act" && canAct) {
             guide.innerHTML = due ?
                 `<b>YOUR TURN</b><span><strong>${due}</strong>をCALL、RAISE、またはFOLDを選んでください。</span>` :
@@ -848,6 +898,16 @@
         }
     }
     $("#start").onclick = init;
+    $("#sound-toggle").onclick = async () => {
+        try {
+            audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+            await audioContext.resume();
+            soundEnabled = !soundEnabled;
+            $("#sound-toggle").textContent = soundEnabled ? "SOUND ON" : "SOUND OFF";
+            $("#sound-toggle").setAttribute("aria-pressed", String(soundEnabled));
+            if (soundEnabled) cue("action");
+        } catch (_) { $("#sound-toggle").textContent = "SOUND unavailable"; }
+    };
     document.querySelectorAll('input[name="theme"]').forEach((input) => {
         input.addEventListener("change", () => setTheme(input.value));
     });

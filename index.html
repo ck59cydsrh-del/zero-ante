@@ -10,7 +10,7 @@
     <meta property="og:description" content="TDA準拠のポーカーと、判断を拡張するローグライク・モジュール。">
     <meta property="og:image" content="https://odd-even-rogue-duel.yuhgamiya.chatgpt.site/og.png">
     <title>ZERO//ANTE — TOURNAMENT HOLD'EM</title>
-    <link rel="stylesheet" href="style.css?v=14">
+    <link rel="stylesheet" href="style.css?v=15">
 </head>
 
 <body data-theme="light">
@@ -18,14 +18,13 @@
     <main class="console">
         <header><a class="logo" href="#">ZERO<span>//</span>ANTE</a>
             <div class="street-nav"><i id="s-pre" class="on">PRE</i><i id="s-flop">FLOP</i><i id="s-turn">TURN</i><i id="s-river">RIVER</i></div>
-            <div class="header-tools"><button id="theme-toggle" type="button" aria-label="表示色を切り替える"><i></i><span>WHITE</span></button><div class="run"><span>LEVEL</span><b id="level">01</b></div></div>
+            <div class="header-tools"><button id="sound-toggle" type="button" aria-pressed="false">SOUND OFF</button><button id="theme-toggle" type="button" aria-label="表示色を切り替える"><i></i><span>WHITE</span></button><div class="run"><span>LV.</span><b id="level">01</b></div></div>
         </header>
         <section class="game">
-            <div class="table-noise"></div><div class="ink-table" aria-hidden="true"></div><div class="table-edition" aria-hidden="true">THE UNPREDICTABLE TABLE / 001</div>
+            <div class="circuit-table" aria-hidden="true"><div class="circuit-border"></div><span class="board-label">ZA–01 / CLOSED CIRCUIT</span></div><div id="chip-flight" aria-hidden="true"></div><div id="burst" aria-hidden="true"></div>
             <div class="genre-key"><span class="info">INFO</span><span class="attack">ATTACK</span><span class="guard">GUARD</span><span class="chaos-key">CHAOS</span></div>
             <aside class="action-feed"><b>LIVE FEED</b><div id="action-log"><span>テーブルを準備中...</span></div></aside>
             <div id="event-fx" class="event-fx hidden" aria-live="assertive"><small id="event-type">SYSTEM</small><strong id="event-title">ROUND START</strong><span id="event-copy"></span></div>
-            <div id="action-pop" class="action-pop hidden" aria-live="polite"><small id="action-player">PLAYER_01</small><strong id="action-name">CHECK</strong></div>
             <div id="seats" class="seats"></div>
             <div class="holdem-center">
                 <div class="pot-box"><small>TOTAL POT</small><strong id="pot">0000</strong><span id="blinds">SB 10 / BB 20 / BBA 20</span></div>
@@ -40,23 +39,24 @@
                     <div id="hole" class="hand hole"></div>
                     <div class="decision"><small>CURRENT HAND</small><b id="hand-name">—</b><span id="module-readout">NO MODULE DATA</span></div>
                 </div>
+                <div id="action-pop" class="action-pop hidden" aria-live="polite"><small id="action-player">PLAYER_01</small><strong id="action-name">CHECK</strong></div>
                 <div class="stack-strip">
-                    <div class="my-stack"><span class="chip-pile hero"><i></i><i></i><i></i></span><small>MY STACK</small><strong id="viewer-chips">1,000</strong></div>
-                    <div><small>TO CALL</small><b id="to-call">0</b></div>
+                    <div class="my-stack"><span class="chip-pile hero"><i></i><i></i><i></i></span><small>所持チップ / STACK</small><strong id="viewer-chips">1,000</strong></div>
+                    <div><small>必要チップ</small><b id="to-call">0</b></div>
                     <div><small>TABLE POT</small><b id="pot-mini">0</b></div>
                     <div><small>POSITION</small><b id="position">—</b></div>
                 </div>
-                <div class="bet-controls"><button id="fold" class="dark">FOLD</button><button id="checkcall">CHECK</button>
-                    <div class="raise-control"><button id="minus">−</button><b id="raise-value">40</b><button id="plus">＋</button></div><button id="raise">RAISE TO</button><button id="allin" class="red">ALL-IN</button>
+                <div class="bet-controls"><button id="fold" class="dark">降りる <small>FOLD</small></button><button id="checkcall">CHECK</button>
+                    <div class="raise-control"><small>レイズ後の合計</small><button id="minus" aria-label="レイズ額を減らす">−</button><b id="raise-value">40</b><button id="plus" aria-label="レイズ額を増やす">＋</button></div><button id="raise">レイズ <small>RAISE</small></button><button id="allin" class="red">全額賭ける <small>ALL-IN</small></button>
                 </div>
             </div>
-            <div id="setup" class="modal setup"><span class="eyebrow">ZERO ANTE / ROGUE POKER CLUB</span>
-                <h1>ZERO<span class="title-second">ANTE<span class="title-dot">.</span></span><span class="title-caption">その一手で、流れを変える。</span></h1>
-                <div class="setup-art" aria-hidden="true"><div class="art-label">A STUDY<br>IN CHANCE.</div><div class="art-caption">001 — THE UNPREDICTABLE TABLE</div></div>
-                <div class="setup-grid"><label>PLAY MODE<select id="mode">
-                            <option value="solo">1 PLAYER + CPU</option>
-                            <option value="local">LOCAL PLAYERS</option>
-                        </select></label><label>SEATS<select id="count">
+            <div id="setup" class="modal setup"><span class="eyebrow">ZERO ANTE / EXPERIMENTAL POKER SYSTEM</span>
+                <h1>ZERO<br>ANTE<span class="title-caption">POKER. WITH INTERFERENCE.</span></h1>
+                <div class="setup-art" aria-hidden="true"><div class="art-label">CIRCUIT<br>BREAKER.</div><div class="art-number">01</div><div class="art-caption">52 CARDS · 2–6 PLAYERS · NO LIMIT</div></div>
+                <div class="setup-grid"><label>01 / 対戦モード<select id="mode">
+                            <option value="solo">自分 ＋ CPU</option>
+                            <option value="local">みんなで遊ぶ（端末を共有）</option>
+                        </select></label><label>02 / テーブル人数<select id="count">
                             <option selected>2</option>
                             <option>3</option>
                             <option>4</option>
@@ -65,7 +65,7 @@
                         </select></label></div>
                 <fieldset class="theme-picker"><legend>APPEARANCE / 表示色</legend><label><input type="radio" name="theme" value="light" checked><span><i></i>WHITE</span></label><label><input type="radio" name="theme" value="dark"><span><i></i>BLACK</span></label></fieldset>
                 <div class="quick-guide"><span><b>1</b> 自分だけが見る2枚</span><span><b>2</b> CHECK / CALL / RAISE</span><span><b>3</b> 場の5枚と合わせる</span><span><b>4</b> 最強の5枚で勝負</span></div>
-                <p>ポーカーに、予測不能の一滴を。<br>勝つたびに能力を選び、次のハンドを変える。</p><button id="start">席につく <kbd>PLAY →</kbd></button>
+                <p>持ち点1,000。手札は2枚、場札は5枚。<br>ハンドに勝って能力を獲得。次の勝負に仕掛ける。</p><button id="start">対戦を始める <kbd>START →</kbd></button>
             </div>
             <div id="pass" class="modal pass hidden"><span class="eyebrow">ONE PLAYER TO A HAND</span>
                 <h2 id="pass-title">PASS TO PLAYER 02</h2>
@@ -97,7 +97,7 @@
             <p><b class="chaos-key">CHAOS</b>6枚目の場札など、その試合だけルールを改変。</p>
         </div><small>2024 Poker TDA rules used as procedural reference. Rogue modules are explicit game variants and are announced before they resolve.</small>
     </dialog>
-    <script src="game.js?v=14"></script>
+    <script src="game.js?v=15"></script>
 </body>
 
 </html>
