@@ -65,11 +65,14 @@
 
     try { setTheme(localStorage.getItem("zero-ante-theme") || "light", false); }
     catch (_) { setTheme("light", false); }
-    const soundEngine = typeof GameSound !== "undefined" ? GameSound.create(window.Audio) : null;
+    const soundEngine = typeof GameSound !== "undefined" ? GameSound.create(window.AudioContext || window.webkitAudioContext) : null;
     let soundEnabled = false;
     function cue(kind) {
         if (!soundEnabled || !soundEngine) return false;
-        return soundEngine.play(kind);
+        const played=soundEngine.play(kind);
+        const patterns={raise:18,allin:[24,35,70],attack:[16,28],chaos:[12,25,12],reward:[12,22],win:[18,35,18,60],defeat:28};
+        if(played&&patterns[kind]&&navigator.vibrate)navigator.vibrate(patterns[kind]);
+        return played;
     }
     function impact(kind) {
         if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -769,7 +772,14 @@
         $("#level").textContent = String(level + 1).padStart(2, "0");
         $("#blinds").textContent =
             `SB ${S} / BB ${B} / BBA ${active().length >= 3 ? B : 0}`;
-        $("#pot").textContent = String(pot()).padStart(4, "0");
+        const potValue=pot(), potEl=$("#pot");
+        const nextPot=String(potValue).padStart(4,"0");
+        if(potEl.textContent!==nextPot){
+            potEl.textContent=nextPot;
+            potEl.parentElement.dataset.heat=String(Math.min(4,Math.floor(potValue/Math.max(B,1))));
+            potEl.classList.remove("surge");
+            requestAnimationFrame(()=>potEl.classList.add("surge"));
+        }
         const boardKey = board.map((c) => `${c.s}${c.r}`).join("|");
         if (boardKey !== lastBoardKey) {
             const container = $("#board");

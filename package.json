@@ -4,6 +4,6 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "python3 -m http.server 4173",
-    "build": "mkdir -p dist && cp index.html game.js rogue.js sound.js og.png circuit-frame.svg immersive.css clarity-game.css instrument.css circle.css dist/ && cp circuit.css dist/style.css && cp -R assets dist/"
+    "build": "mkdir -p dist && cp index.html game.js rogue.js sound.js og.png circuit-frame.svg immersive.css clarity-game.css instrument.css circle.css dist/ && cp circuit.css dist/style.css"
   }
 }
