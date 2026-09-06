@@ -40,7 +40,7 @@
     ];
     const plainNames = {odds:'必要な勝率を見る',scan:'今の役がわかる',tell:'相手の様子を見る',map:'次の参加額を見る',rebuy:'ピンチで100枚',reserve:'ピンチで60枚',insurance:'降りても少し返る',cushion:'場札3枚で15枚',patience:'CHECKで10枚',cashback:'CALLで10枚',comeback:'負けても40枚',vault:'毎回20枚もらう',scramble:'相手の高い札を交換',lowcut:'相手の低い札を交換',silence:'最初の増額を止める',drain:'相手から20枚もらう',jam:'相手のチップ補助を止める',fog:'相手の情報能力を止める',pressure:'相手に追加参加費',expose:'相手の札を1枚公開',redline:'赤い札を1つ強く',blackline:'黒い札を1つ強く',sixboard:'場札を6枚にする',thirdhole:'手札が3枚になる',reroll:'自分の低い札を交換',pairforge:'最初からペア',hearts:'手札をすべてハートに',spades:'手札をすべてスペードに',flopshift:'場の3枚目を交換',riverboost:'場の5枚目を強く',doubleante:'全員の参加費アップ',bounty:'勝ったら追加80枚'};
     const plain = text => text.replaceAll('回復','チップ追加').replaceAll('ハンド','勝負').replaceAll('全生存者','まだ脱落していない全員').replaceAll('プリフロップ','場札が出る前の勝負').replaceAll('フロップ','最初の場札3枚').replaceAll('リバー','最後の場札').replaceAll('アンティ','参加費').replaceAll('メインポット','最初のポット').replaceAll('ランク','数字').replaceAll('生存相手','まだ脱落していない相手').replaceAll('残り200未満','所持チップが200枚未満').replaceAll('残り300未満','所持チップが300枚未満').replaceAll('1BB','その回の大きい参加額（BB）');
-    const catalog = rows.map(([id,icon,name,cat,tier,desc]) => ({id,icon,name:plainNames[id],codeName:name,cat,tier,desc:plain(desc)}));
+    const catalog = rows.map(([id,icon,name,cat,tier,desc]) => ({id,icon,name,codeName:name,cat,tier,desc:plain(desc)}));
     const tiers = {1:'通常',2:'レア',3:'伝説'};
     const has = (p,id) => p.mods.some(m => m.id === id);
     const usable = (p,m) => !(p.guardJammed && m.cat === 'guard') && !(p.fogged && m.cat === 'info');

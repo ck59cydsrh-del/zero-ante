@@ -10,9 +10,10 @@
     <meta property="og:description" content="32種類の能力と勝利・敗北の報酬。独自ローグルールで遊ぶホールデム。">
     <meta property="og:image" content="https://odd-even-rogue-duel.yuhgamiya.chatgpt.site/og.png">
     <title>ZERO//ANTE — TOURNAMENT HOLD'EM</title>
-    <link rel="stylesheet" href="style.css?v=17">
-    <link rel="stylesheet" href="immersive.css?v=17">
-    <link rel="stylesheet" href="clarity-game.css?v=17">
+    <link rel="stylesheet" href="style.css?v=18">
+    <link rel="stylesheet" href="immersive.css?v=18">
+    <link rel="stylesheet" href="clarity-game.css?v=18">
+    <link rel="stylesheet" href="instrument.css?v=18">
 </head>
 
 <body data-theme="light">
@@ -45,7 +46,7 @@
                 </div>
                 <div id="action-pop" class="action-pop hidden" aria-live="polite"><small id="action-player">PLAYER_01</small><strong id="action-name">CHECK</strong><span id="action-detail"></span></div>
                 <div class="stack-strip">
-                    <div class="my-stack"><span class="chip-pile hero"><i></i><i></i><i></i></span><small>所持チップ / STACK</small><strong id="viewer-chips">1,000</strong></div>
+                    <div class="my-stack"><span class="chip-pile hero"><i></i><i></i><i></i></span><small>STACK / 所持</small><strong id="viewer-chips">1,000</strong></div>
                     <div><small>必要チップ</small><b id="to-call">0</b></div>
                     <div><small>TABLE POT</small><b id="pot-mini">0</b></div>
                     <div><small>POSITION</small><b id="position">—</b></div>
@@ -54,7 +55,7 @@
                     <div class="raise-control"><small>RAISE TO</small><button id="minus" aria-label="レイズ額を減らす">−</button><b id="raise-value">40</b><button id="plus" aria-label="レイズ額を増やす">＋</button></div><button id="raise">RAISE</button><button id="allin" class="red">ALL-IN</button>
                 </div>
             </div>
-            <div id="setup" class="modal setup"><span class="eyebrow">ZERO ANTE / EXPERIMENTAL POKER SYSTEM</span>
+            <div id="setup" class="modal setup"><span class="eyebrow">ZA–01 / ROGUE POKER</span>
                 <h1>ZERO<br>ANTE<span class="title-caption">POKER. WITH INTERFERENCE.</span></h1>
                 <div class="setup-art" aria-hidden="true"><div class="art-label">CIRCUIT<br>BREAKER.</div><div class="art-number">01</div><div class="art-caption">52 CARDS · 2–6 PLAYERS · NO LIMIT</div></div>
                 <div class="setup-grid"><label>01 / 対戦モード<select id="mode">
@@ -69,13 +70,13 @@
                         </select></label><div id="local-names" class="local-names hidden"></div></div>
                 <fieldset class="theme-picker"><legend>APPEARANCE / 表示色</legend><label><input type="radio" name="theme" value="light" checked><span><i></i>WHITE</span></label><label><input type="radio" name="theme" value="dark"><span><i></i>BLACK</span></label></fieldset>
                 <div class="quick-guide"><span><b>1</b> 自分だけが見る2枚</span><span><b>2</b> CHECK / CALL / RAISE</span><span><b>3</b> 場の5枚と合わせる</span><span><b>4</b> 最強の5枚で勝負</span></div>
-                <p>チップ600枚から開始。参加額25／50、2回ごとにアップ。<br>勝つと強い能力、負けても通常能力を1つ選べます。</p><button id="start">対戦を始める <kbd>START →</kbd></button>
+                <p>チップ600枚から開始。参加額25／50、2回ごとにアップ。<br>勝つと強い能力、負けても通常能力を1つ選べます。</p><button id="start">PLAY <kbd>→</kbd></button>
             </div>
             <div id="pass" class="modal pass hidden"><span class="eyebrow">ONE PLAYER TO A HAND</span>
                 <h2 id="pass-title">PASS TO PLAYER 02</h2>
                 <p>ほかの人に見えないよう端末を受け取り、自分の手札を開いてください。</p><button id="reveal">自分の手札を見る</button>
             </div>
-            <div id="round-result" class="modal round-result hidden"><span id="round-eyebrow" class="eyebrow">今回の結果</span><h2 id="round-title"></h2><p id="round-summary"></p><div id="round-board" class="result-board"></div><div id="round-players" class="round-players"></div><button id="to-rewards">結果を確認して、能力を選ぶ →</button></div>
+            <div id="round-result" class="modal round-result hidden"><span id="round-eyebrow" class="eyebrow">今回の結果</span><h2 id="round-title"></h2><p id="round-summary"></p><div id="round-board" class="result-board"></div><div id="round-players" class="round-players"></div><button id="to-rewards">能力を選ぶ →</button></div>
             <div id="relic" class="modal chaos hidden">
                 <div class="chaos-head">
                     <div><span class="eyebrow">HAND WON / MODULE DRAFT</span>
@@ -102,8 +103,8 @@
             <p><b class="chaos-key">CHAOS</b>6枚目の場札など、その試合だけルールを改変。</p>
         </div><p>各ハンド終了後、勝者はレア／伝説、敗者は通常能力を1つ獲得。能力ボタンを押すと条件と直近の発動結果を確認できます。チップ追加・報酬能力は銀行からチップを追加します。書換能力では同一札も許容し、5枚同ランクはFIVE OF A KIND（最上位）です。</p><small>ホールデムを土台にした独自ローグルールです。公式大会と同じルールではありません。</small>
     </dialog>
-    <script src="rogue.js?v=17"></script>
-    <script src="game.js?v=17"></script>
+    <script src="rogue.js?v=18"></script>
+    <script src="game.js?v=18"></script>
 </body>
 
 </html>

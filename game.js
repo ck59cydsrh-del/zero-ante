@@ -657,21 +657,21 @@
         afterEffects(()=>{
             roundWinners=winners; phase="round-result";
             const lost=mode==="solo"&&!winners.some(p=>p.human);
-            $("#round-eyebrow").textContent=`第${handNo}回 / 結果を確認してから次へ`;
+            $("#round-eyebrow").textContent=`HAND ${String(handNo).padStart(2,"0")} / RESULT`;
             $("#round-title").textContent=mode==="solo"?(lost?"あなたの負け":"あなたの勝ち！"):`${winners.map(p=>p.name).join("・")} の勝ち！`;
             $("#round-result").dataset.outcome=lost?"lost":"won";
-            $("#round-summary").textContent=`勝者：${winners.map(p=>p.name).join("・")}。${winners[0].rank?roleName(winners[0].rank.name)+"で勝利。":"ほかの全員がFOLDしたため勝利。"}${lost?"負けても通常能力を1つ選べます。":"勝者にはレア・伝説の能力が出ます。"}`;
+            $("#round-summary").textContent=`${winners.map(p=>p.name).join(" / ")} — ${winners[0].rank?roleName(winners[0].rank.name):"全員FOLD"}`;
             const runner=P.filter(p=>p.rank&&!winners.includes(p)).sort((a,b)=>cmp(b.rank,a.rank))[0];
             if(runner && winners[0].rank.cat===runner.rank.cat){
                 const win=winners[0], k=win.rank.tie.findIndex((r,i)=>r!==runner.rank.tie[i]);
                 const label=r=>({14:"A",13:"K",12:"Q",11:"J"}[r]||r);
-                if(k>=0)$("#round-summary").textContent+=` 同じ役ですが、数字を順に比べた決め手は ${win.name}の${label(win.rank.tie[k])} ＞ ${runner.name}の${label(runner.rank.tie[k])} でした。`;
+                if(k>=0)$("#round-summary").textContent+=` / ${label(win.rank.tie[k])} ＞ ${label(runner.rank.tie[k])}`;
             }
             $("#round-board").innerHTML=board.length?`<small>全員共通の場札</small><div>${board.map((c,i)=>card(c,i)).join("")}</div>`:"";
             $("#round-players").innerHTML=P.filter(p=>p.participated).map(p=>{
                 const delta=p.chips-p.startChips;
                 const hand=p.rank?p.bestCards.map((c,i)=>card(c,i)).join(""):"";
-                return `<article class="${p.handWon?"round-winner":""}"><header><b>${p.name}</b><strong>${p.handWon?"勝ち":p.payout>0?"サイドポット獲得":"負け"}</strong></header><h3>${p.rank?roleName(p.rank.name):p.folded?"FOLD — 勝負を降りた":"全員FOLDで勝利"}</h3><div class="result-hand">${hand||"<span>手札は非公開</span>"}</div>${p.rank?"<small>勝負した5枚（能力適用後）</small>":""}<p>所持 ${p.startChips} → <b>${p.chips}枚</b> <em>${delta>=0?"+":""}${delta}</em></p><small>ポットから獲得：${p.payout||0}枚</small>${p.rank?`<details><summary>元の手札を見る</summary><div class="result-hand">${p.hole.map((c,i)=>card(c,i)).join("")}</div></details>`:""}</article>`;
+                return `<article class="${p.handWon?"round-winner":""}"><header><b>${p.name}</b><strong>${p.handWon?"WIN":p.payout>0?"SIDE POT":"LOSS"}</strong></header><div class="result-hand">${hand||`<span>${p.folded?"FOLD":"—"}</span>`}</div><div class="result-numbers"><b>${delta>=0?"+":""}${delta}</b><small>${p.chips} STACK</small></div></article>`;
             }).join("");
             $("#round-result").classList.remove("hidden");
             $("#turn-banner").innerHTML="<strong>今回の勝負が決まりました</strong><span>カードとチップの増減を確認してください</span>";
