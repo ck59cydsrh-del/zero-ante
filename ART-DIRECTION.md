@@ -1,4 +1,12 @@
-# Beginner clarity edition — current
+# Minimal rhythm — current
+
+The active surface is now monochrome, unboxed and aligned like a sequencer: numbered
+street steps, a small turn indicator, tabular chip counts and flat action keys. Pixel
+cards retain red suits. Ability names stay English, descriptions Japanese. Results are
+compact rows. Crucially the action pod inherits theme variables instead of overriding
+them with the former green-table palette. Setup is a centered auto-height panel.
+
+## Previous beginner clarity foundation
 
 Circuit ornaments are removed. A continuous green table puts readable turn guidance above
 the opponents and the player controls within the lower edge. Desktop pot and community
