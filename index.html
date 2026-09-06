@@ -10,11 +10,11 @@
     <meta property="og:description" content="32種類の能力と勝利・敗北の報酬。独自ローグルールで遊ぶホールデム。">
     <meta property="og:image" content="https://odd-even-rogue-duel.yuhgamiya.chatgpt.site/og.png">
     <title>ZERO//ANTE — TOURNAMENT HOLD'EM</title>
-    <link rel="stylesheet" href="style.css?v=25">
-    <link rel="stylesheet" href="immersive.css?v=25">
-    <link rel="stylesheet" href="clarity-game.css?v=25">
-    <link rel="stylesheet" href="instrument.css?v=25">
-    <link rel="stylesheet" href="circle.css?v=25">
+    <link rel="stylesheet" href="style.css?v=26">
+    <link rel="stylesheet" href="immersive.css?v=26">
+    <link rel="stylesheet" href="clarity-game.css?v=26">
+    <link rel="stylesheet" href="instrument.css?v=26">
+    <link rel="stylesheet" href="circle.css?v=26">
 </head>
 
 <body data-theme="light">
@@ -73,6 +73,7 @@
                 <div class="quick-guide"><span><b>1</b> 自分だけが見る2枚</span><span><b>2</b> CHECK / CALL / RAISE</span><span><b>3</b> 場の5枚と合わせる</span><span><b>4</b> 最強の5枚で勝負</span></div>
                 <p>チップ600枚から開始。参加額25／50、2回ごとにアップ。<br>勝利報酬は伝説候補つき。負けても能力獲得、引き直しは1回。</p><button id="start">PLAY <kbd>→</kbd></button>
             </div>
+            <div id="target-picker" class="modal target-picker hidden" role="dialog" aria-modal="true" aria-labelledby="target-module"><span class="eyebrow">MANUAL MODULE / SELECT TARGET</span><h2 id="target-module">DOWN SHIFT</h2><p id="target-copy"></p><div id="target-options" class="target-options"></div><button id="cancel-target" type="button">CANCEL</button></div>
             <div id="pass" class="modal pass hidden"><span class="eyebrow">ONE PLAYER TO A HAND</span>
                 <h2 id="pass-title">PASS TO PLAYER 02</h2>
                 <p>ほかの人に見えないよう端末を受け取り、自分の手札を開いてください。</p><button id="reveal">自分の手札を見る</button>
@@ -103,11 +104,11 @@
             <p><b class="info">INFO</b>確率・役・CPU傾向など判断材料を追加。</p>
             <p><b class="attack">ATTACK</b>カード交換やレイズ封印で相手を妨害。</p>
             <p><b class="chaos-key">CHAOS</b>6枚目の場札など、その試合だけルールを改変。</p>
-        </div><p>各ハンド終了後、勝者はレア／伝説、敗者は通常能力を1つ獲得。能力ボタンを押すと条件と直近の発動結果を確認できます。チップ追加・報酬能力は銀行からチップを追加します。書換能力では同一札も許容し、5枚同ランクはFIVE OF A KIND（最上位）です。</p><small>ホールデムを土台にした独自ローグルールです。公式大会と同じルールではありません。</small>
+        </div><p>各ハンド終了後、勝者はレア／伝説、敗者は通常能力を1つ獲得。AUTO能力は条件成立時に発動し、USE表示の能力は自分の手番中に押して対象を選びます。チップ追加・報酬能力は銀行からチップを追加します。書換能力では同一札も許容し、5枚同ランクはFIVE OF A KIND（最上位）です。</p><small>ホールデムを土台にした独自ローグルールです。公式大会と同じルールではありません。</small>
     </dialog>
-    <script src="rogue.js?v=25"></script>
-    <script src="sound.js?v=25"></script>
-    <script src="game.js?v=25"></script>
+    <script src="rogue.js?v=26"></script>
+    <script src="sound.js?v=26"></script>
+    <script src="game.js?v=26"></script>
 </body>
 
 </html>

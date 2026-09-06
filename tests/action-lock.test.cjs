@@ -4,9 +4,9 @@ test('local names preserve Japanese and Latin letters but strip markup',()=>{con
 const action=source.slice(source.indexOf('    function act('),source.indexOf('    function advance('));
 function run(type,street,chips=100,due=20){
  const p={id:0,human:true,name:'P0',chips,bet:0,total:0,mods:[],silenced:true,allin:false,folded:false};
- const ctx={phase:'act',P:[p],actor:0,street,currentBet:due,minRaise:20,raiseTo:40,pending:new Set([0]),
+ const ctx={phase:'act',manualResolving:false,P:[p],actor:0,street,currentBet:due,minRaise:20,raiseTo:40,pending:new Set([0]),
   pay:(p,n)=>{const x=Math.min(p.chips,n);p.chips-=x;p.bet+=x;p.total+=x;p.allin=!p.chips;},
-  live:()=>[p],effectContext:()=>({events:[]}),Rogue:{action:()=>{}},publishEffects:()=>{},flyChips:()=>{},pushLog:()=>{},flashAction:()=>{},render:()=>{},setTimeout:()=>{},$:()=>({textContent:''})};
+  live:()=>[p],effectContext:()=>({events:[]}),Rogue:{action:()=>{}},publishEffects:()=>{},flyChips:()=>{},raiseSignal:()=>{},pushLog:()=>{},flashAction:()=>{},render:()=>{},setTimeout:()=>{},$:()=>({textContent:''})};
  vm.runInNewContext(action+`;act('${type}');`,ctx);return p;
 }
 test('preflop jammer blocks raise and over-call all-in in the real action handler',()=>{assert.equal(run('raise','pre').chips,100);assert.equal(run('allin','pre').chips,100);});

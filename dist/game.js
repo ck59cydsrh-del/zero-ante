@@ -43,7 +43,9 @@
         fxQueue = [],
         fxBusy = false,
         actionPopTimer = 0,
-        actionHideTimer = 0;
+        actionHideTimer = 0,
+        manualResolving = false,
+        pendingModule = null;
 
     function setTheme(value, remember = true) {
         const theme = "light";
@@ -110,14 +112,31 @@
     function abilitySignal(effect) {
         const pod=$(".active-pod"), viewer=Number(pod.dataset.viewer);
         const node=id=>id===viewer?pod:$(`.pos-${id}`);
-        const source=node(effect.owner), target=node(effect.target);
+        const source=node(effect.owner), target=effect.scope==="board"?$("#board"):node(effect.target);
         source?.classList.add("casting");
-        target?.classList.add("targeted",effect.cat==="attack"?"debuff-hit":"buff-hit");
+        target?.classList.add("targeted",effect.scope==="board"?"board-hit":effect.cat==="attack"?"debuff-hit":"buff-hit");
         if(!source||!target||matchMedia("(prefers-reduced-motion: reduce)").matches)return;
         const area=$(".game").getBoundingClientRect(), a=source.getBoundingClientRect(), b=target.getBoundingClientRect();
         const x=a.x+a.width/2-area.x,y=a.y+a.height/2-area.y,tx=b.x+b.width/2-area.x,ty=b.y+b.height/2-area.y;
         const wave=document.createElement("i");wave.className=`ability-wave ${effect.cat}`;wave.style.cssText=`--x:${tx}px;--y:${ty}px`;$("#burst").append(wave);setTimeout(()=>wave.remove(),1100);
-        if(effect.owner!==effect.target){const ray=document.createElement("i");ray.className=`ability-ray ${effect.cat}`;ray.style.cssText=`--x:${x}px;--y:${y}px;--distance:${Math.hypot(tx-x,ty-y)}px;--angle:${Math.atan2(ty-y,tx-x)}rad`;$("#burst").append(ray);setTimeout(()=>ray.remove(),900);}
+        if(source!==target){const ray=document.createElement("i");ray.className=`ability-ray ${effect.cat}`;ray.style.cssText=`--x:${x}px;--y:${y}px;--distance:${Math.hypot(tx-x,ty-y)}px;--angle:${Math.atan2(ty-y,tx-x)}rad`;$("#burst").append(ray);setTimeout(()=>ray.remove(),900);}
+    }
+    function raiseSignal(player, amount) {
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        const area=$(".game").getBoundingClientRect();
+        const source=(player.human?$("#viewer-chips"):$(`.pos-${player.id} .seat-bank`))?.getBoundingClientRect();
+        const target=$("#pot").getBoundingClientRect();
+        if(!source)return;
+        const x=source.x+source.width/2-area.x,y=source.y+source.height/2-area.y;
+        const tx=target.x+target.width/2-area.x,ty=target.y+target.height/2-area.y;
+        for(let i=0;i<5;i++){
+            const trace=document.createElement("i");trace.className="raise-trace";
+            trace.style.cssText=`--x:${x}px;--y:${y+(i-2)*6}px;--distance:${Math.hypot(tx-x,ty-y)}px;--angle:${Math.atan2(ty-y,tx-x)}rad;--delay:${i*.035}s`;
+            $("#burst").append(trace);setTimeout(()=>trace.remove(),950);
+        }
+        const stamp=document.createElement("div");stamp.className="raise-stamp";stamp.style.cssText=`--x:${tx}px;--y:${ty}px`;stamp.innerHTML=`<small>POT SIGNAL</small><b>+${amount}</b>`;
+        $("#burst").append(stamp);setTimeout(()=>stamp.remove(),1250);
+        $(".circuit-table").classList.remove("raise-charge");requestAnimationFrame(()=>$(".circuit-table").classList.add("raise-charge"));
     }
     const mods = Rogue.catalog;
     let rewardQueue = [], rewardOwner = null, roundWinners=[], lastActionText="", localNames=[], rewardWon=false, rerollsLeft=0;
@@ -137,7 +156,7 @@
         el.querySelectorAll("input").forEach((input,i)=>input.addEventListener("input",()=>localNames[i]=input.value));
     }
     $("#mode").addEventListener("change",nameFields);$("#count").addEventListener("change",nameFields);nameFields();
-    function effectContext() { return {players:P, deck, board, bb:LEVELS[level][1],events:[]}; }
+    function effectContext() { return {players:P, deck, board, street, bb:LEVELS[level][1],events:[]}; }
     function publishEffects(ctx) {
         for (const e of ctx.events) {
             pushLog(`${e.ownerName} → ${e.targetName} / ${e.name} / ${e.copy}`, e.cat);
@@ -304,7 +323,7 @@
         $("#event-copy").textContent = item.copy;
         const route=$("#event-route");
         route.hidden=!item.effect;
-        document.querySelectorAll(".targeted,.fired,.casting,.debuff-hit,.buff-hit").forEach(n=>n.classList.remove("targeted","fired","casting","debuff-hit","buff-hit"));
+        document.querySelectorAll(".targeted,.fired,.casting,.debuff-hit,.buff-hit,.board-hit").forEach(n=>n.classList.remove("targeted","fired","casting","debuff-hit","buff-hit","board-hit"));
         if(item.effect){
             const e=item.effect;
             el.classList.add("ability-hit");
@@ -477,7 +496,7 @@
     }
 
     function act(type) {
-        if (phase !== "act" && phase !== "cpu") return;
+        if ((phase !== "act" && phase !== "cpu") || manualResolving) return;
         let p = P[actor],
             beforeChips = p.chips,
             due = Math.max(0, currentBet - p.bet);
@@ -520,13 +539,14 @@
         const actionCtx=effectContext(); Rogue.action(actionCtx,p,type); publishEffects(actionCtx);
         pending.delete(p.id);
         if (p.chips < beforeChips) flyChips(p);
-        const kind = type === "raise" || type === "allin" ? "attack" : "action";
+        const kind = type === "allin" ? "attack" : type === "raise" ? "raise" : "action";
         pushLog(`${p.name} / ${p.last}`, kind);
         const spent=Math.max(0,beforeChips-p.chips);
         const actionDescriptions={fold:"勝負から降りました",check:"追加のチップなしで続けました",call:`${Math.min(due,beforeChips)}枚を出して続けました`,raise:`合計${p.bet}枚に増額しました`,allin:`残りのチップをすべて賭けました`};
         lastActionText=`${p.name}が${actionDescriptions[type]}。所持 ${beforeChips} → ${p.chips}枚`;
         pushLog(lastActionText,kind);
         flashAction(p.last,p.name,kind);
+        if(type==="raise")raiseSignal(p,spent);
         $("#action-detail").textContent=type==="check"?"追加 0枚":type==="fold"?"この勝負は見送る":`所持 ${beforeChips} → ${p.chips}枚`;
         if(spent) $("#action-detail").textContent+=`（−${spent}）`;
         phase = "transition";
@@ -593,8 +613,24 @@
         setTimeout(() => showActor(true), 1150);
     }
 
-    function cpu() {
-        let p = P[actor],
+    function cpu(skipManual = false) {
+        let p = P[actor];
+        if(!skipManual){
+            const ctx=effectContext(),ready=p.mods.filter(m=>m.manual&&Rogue.manualReady(m,ctx,p));
+            if(ready.length&&Math.random()>.45){
+                const m=ready[Math.floor(Math.random()*ready.length)],targets=live().filter(q=>q.id!==p.id);
+                const target=m.targeted?targets[Math.floor(Math.random()*targets.length)]?.id:null;
+                const result=Rogue.manual(ctx,p,m.id,target);
+                if(result.ok){
+                    lastHoleKey=null;lastBoardKey=null;phase="transition";
+                    lastActionText=`${p.name} が ${m.name} を発動。${result.event.copy}`;
+                    publishEffects(ctx);render();
+                    afterEffects(()=>{phase="cpu";render();setTimeout(()=>cpu(true),420);});
+                    return;
+                }
+            }
+        }
+        let
             due = Math.max(0, currentBet - p.bet),
             strength =
             board.length >= 3 ?
@@ -789,6 +825,45 @@
         return playerStatuses(p,currentStreet).map(s=>`<i class="${s.kind}" title="${s.copy}"><b>${s.code}</b><span>${s.copy}</span></i>`).join("");
     }
 
+    function closeTargetPicker() {
+        $("#target-picker").classList.add("hidden");
+        pendingModule=null;
+    }
+    function openTargetPicker(m,viewer) {
+        if(!m.manual)return;
+        const ready=phase==="act"&&P[actor]===viewer&&!manualResolving&&Rogue.manualReady(m,effectContext(),viewer);
+        if(!ready){
+            const wait=m.board&&board.length<3?"場札が3枚出たら使用できます":viewer.used?.['manual:'+m.id]?"この勝負では使用済みです":"自分の手番中に使用できます";
+            $("#effect-receipt").innerHTML=`<header><em>${m.cat.toUpperCase()}</em><b>MANUAL MODULE</b></header><strong>${m.name}</strong><span>${m.desc}</span><span>${wait}</span>`;
+            return;
+        }
+        pendingModule=m;
+        $("#target-module").textContent=m.name;
+        $("#target-copy").textContent=m.desc;
+        const choices=m.targeted?live().filter(q=>q.id!==viewer.id):[];
+        $("#target-options").innerHTML=m.board?`<button type="button" data-target="board"><small>COMMUNITY CARDS</small><b>BOARDを書き換える</b><span>全プレイヤーに影響</span></button>`:choices.map(q=>`<button type="button" data-target="${q.id}"><small>TARGET ${String(q.id+1).padStart(2,"0")}</small><b>${q.name}</b><span>所持 ${q.chips.toLocaleString("ja-JP")}枚</span></button>`).join("");
+        $("#target-options").querySelectorAll("button").forEach(button=>button.onclick=()=>activateManual(button.dataset.target));
+        $("#target-picker").classList.remove("hidden");
+    }
+    function activateManual(targetId) {
+        const owner=P[actor],m=pendingModule;
+        if(!m||phase!=="act"||!owner?.human||manualResolving)return;
+        manualResolving=true;
+        $("#target-picker").classList.add("hidden");
+        pendingModule=null;
+        const ctx=effectContext(),result=Rogue.manual(ctx,owner,m.id,targetId==="board"?null:Number(targetId));
+        if(!result.ok){
+            manualResolving=false;
+            $("#effect-receipt").innerHTML=`<header><em>WAIT</em><b>${m.name}</b></header><span>${result.reason}</span>`;
+            render();return;
+        }
+        lastHoleKey=null;lastBoardKey=null;
+        lastActionText=`${owner.name} が ${m.name} を発動。${result.event.copy}`;
+        phase="transition";
+        publishEffects(ctx);render();
+        afterEffects(()=>{manualResolving=false;phase="act";render();});
+    }
+
     function render(show = false) {
         let [S, B] = LEVELS[level];
         $("#level").textContent = String(level + 1).padStart(2, "0");
@@ -827,7 +902,7 @@
         ).join("");
         const actionPlayer = P[actor] || P[0];
         const viewer = mode === "solo" ? P[0] : actionPlayer;
-        const canAct = phase === "act" && actionPlayer?.human;
+        const canAct = phase === "act" && actionPlayer?.human && !manualResolving;
         const canSee = mode === "solo" ?
             !!viewer && !viewer.folded && phase !== "setup" :
             canAct;
@@ -887,10 +962,15 @@
         $("#hand-name").textContent = rank;
         const data=viewer && canSee?Rogue.readout(viewer,{players:P,due:Math.max(0,currentBet-viewer.bet),pot:pot(),handName:rank!=="—"?rank:null,nextBlinds:LEVELS[level+1]?.join("/"),untilLevel:2-(handNo-1)%2}):[];
         $("#module-readout").textContent=data.join(" / ") || "NO MODULE DATA";
-        $("#module-tray").innerHTML=viewer?.mods.length?viewer.mods.map(m=>`<button class="mod-chip ${m.cat}" data-module="${m.id}" title="${m.desc}"><b>${m.icon}</b>${m.name}<span>${viewer.fired?.[m.id]?"✓":""}</span></button>`).join(""):`<span class="empty">能力32種類 / 勝つとレア・伝説、負けても通常能力</span>`;
+        $("#module-tray").innerHTML=viewer?.mods.length?viewer.mods.map(m=>{
+            const ready=m.manual&&canAct&&viewer===actionPlayer&&Rogue.manualReady(m,effectContext(),viewer),used=viewer.used?.['manual:'+m.id];
+            const state=m.manual?(used?"USED":ready?"USE":"WAIT"):(viewer.fired?.[m.id]?"✓":"AUTO");
+            return `<button class="mod-chip ${m.cat} ${m.manual?"manual":"auto"} ${ready?"ready":""} ${used?"spent":""}" data-module="${m.id}" title="${m.desc}"><b>${m.icon}</b>${m.name}<span>${state}</span></button>`;
+        }).join(""):`<span class="empty">能力40種類 / 勝つとレア・伝説、負けても通常能力</span>`;
         if(data.length) $("#module-tray").insertAdjacentHTML("afterbegin",`<span class="live-readout">${data.join(" · ")}</span>`);
         $("#module-tray").querySelectorAll("button").forEach(b=>b.onclick=()=>{
             const m=mods.find(m=>m.id===b.dataset.module);
+            if(m.manual){openTargetPicker(m,viewer);return;}
             $("#effect-receipt").innerHTML=`<b>${m.name} / ${Rogue.tiers[m.tier]}</b><span>${m.desc}</span><span>${viewer.fired?.[m.id]||"条件成立時に自動発動"}${m.cat==="info"?" / "+(data.join(" · ")||"待機中"):""}</span>`;
         });
         ["pre", "flop", "turn", "river"].forEach((s) =>
@@ -959,6 +1039,7 @@
         phase = "act";
         render();
     };
+    $("#cancel-target").onclick=closeTargetPicker;
     $("#fold").onclick = () => act("fold");
     $("#checkcall").onclick = () =>
         act(currentBet > P[actor].bet ? "call" : "check");

@@ -37,10 +37,21 @@
         ['riverboost','RIVER+','RIVER AMP','chaos',2,'FOLDせずリバー到達時、5枚目の場札を1ランク上げる。Aが上限。'],
         ['doubleante','×2','ANTE SURGE','chaos',3,'開始時、全生存者から最大1BBずつ追加アンティを徴収。所有者ごとに発動。'],
         ['bounty','+80','VICTORY BOUNTY','chaos',2,'メインポット勝利時、ポットとは別に80チップ獲得。'],
+        ['downshift','−2','DOWN SHIFT','attack',2,'手番中に1回、選んだ相手の最も高い手札の数字を2下げる。2が下限。'],
+        ['pocketstatic','NOISE','POCKET STATIC','attack',2,'手番中に1回、選んだ相手の手札1枚を山札とランダム交換する。'],
+        ['suitburn','♣','SUIT BURN','attack',2,'手番中に1回、選んだ相手の手札1枚のスートを♣へ書き換える。'],
+        ['ranklock','≤7','RANK LOCK','attack',3,'手番中に1回、選んだ相手の最も高い手札を7以下に固定する。'],
+        ['boardscramble','↻1','BOARD SCRAMBLE','chaos',2,'場札が出た後の手番中に1回、見えている場札1枚を山札と交換する。'],
+        ['boardwipe','↻ALL','BOARD WIPE','chaos',3,'場札が出た後の手番中に1回、見えている場札をすべて交換する。'],
+        ['rankroulette','RNG','RANK ROULETTE','chaos',3,'場札が出た後の手番中に1回、見えている場札すべての数字をランダムにする。'],
+        ['suitstorm','SUIT','SUIT STORM','chaos',2,'場札が出た後の手番中に1回、見えている場札すべてのスートをランダムにする。'],
     ];
     const plainNames = {odds:'必要な勝率を見る',scan:'今の役がわかる',tell:'相手の様子を見る',map:'次の参加額を見る',rebuy:'ピンチで100枚',reserve:'ピンチで60枚',insurance:'降りても少し返る',cushion:'場札3枚で15枚',patience:'CHECKで10枚',cashback:'CALLで10枚',comeback:'負けても40枚',vault:'毎回20枚もらう',scramble:'相手の高い札を交換',lowcut:'相手の低い札を交換',silence:'最初の増額を止める',drain:'相手から20枚もらう',jam:'相手のチップ補助を止める',fog:'相手の情報能力を止める',pressure:'相手に追加参加費',expose:'相手の札を1枚公開',redline:'赤い札を1つ強く',blackline:'黒い札を1つ強く',sixboard:'場札を6枚にする',thirdhole:'手札が3枚になる',reroll:'自分の低い札を交換',pairforge:'最初からペア',hearts:'手札をすべてハートに',spades:'手札をすべてスペードに',flopshift:'場の3枚目を交換',riverboost:'場の5枚目を強く',doubleante:'全員の参加費アップ',bounty:'勝ったら追加80枚'};
     const plain = text => text.replaceAll('回復','チップ追加').replaceAll('ハンド','勝負').replaceAll('全生存者','まだ脱落していない全員').replaceAll('プリフロップ','場札が出る前の勝負').replaceAll('フロップ','最初の場札3枚').replaceAll('リバー','最後の場札').replaceAll('アンティ','参加費').replaceAll('メインポット','最初のポット').replaceAll('ランク','数字').replaceAll('生存相手','まだ脱落していない相手').replaceAll('残り200未満','所持チップが200枚未満').replaceAll('残り300未満','所持チップが300枚未満').replaceAll('1BB','その回の大きい参加額（BB）');
-    const catalog = rows.map(([id,icon,name,cat,tier,desc]) => ({id,icon,name,codeName:name,cat,tier,desc:plain(desc)}));
+    const manualIds = new Set(['downshift','pocketstatic','suitburn','ranklock','boardscramble','boardwipe','rankroulette','suitstorm']);
+    const targetIds = new Set(['downshift','pocketstatic','suitburn','ranklock']);
+    const boardIds = new Set(['boardscramble','boardwipe','rankroulette','suitstorm']);
+    const catalog = rows.map(([id,icon,name,cat,tier,desc]) => ({id,icon,name,codeName:name,cat,tier,desc:plain(desc),manual:manualIds.has(id),targeted:targetIds.has(id),board:boardIds.has(id)}));
     const tiers = {1:'通常',2:'レア',3:'伝説'};
     const has = (p,id) => p.mods.some(m => m.id === id);
     const usable = (p,m) => !(p.guardJammed && m.cat === 'guard') && !(p.fogged && m.cat === 'info');
@@ -49,6 +60,7 @@
         p.fired[m.id] = copy;
         const event = {owner:p.id,target:target.id,id:m.id,name:m.name,cat:m.cat,copy,ownerName:p.name,targetName:target.name};
         ctx.events.push(event);
+        return event;
     }
     function add(ctx,p,m,n,reason) {
         const before=p.chips;
@@ -127,6 +139,59 @@
             emit(ctx,p,m,`判定用の${red?'赤':'黒'}カード ${count}枚を +1 / A上限（表示札は原本）`);
         }
     }
+    function manualReady(m,ctx,p) {
+        if(!m?.manual || !p || p.folded || !usable(p,m) || p.used?.['manual:'+m.id]) return false;
+        if(m.board && (!ctx.board || ctx.board.length<3)) return false;
+        if(m.id==='boardwipe' && ctx.deck.length<ctx.board.length) return false;
+        if(m.id==='boardscramble' && !ctx.deck.length) return false;
+        if(m.targeted && !ctx.players.some(q=>q.id!==p.id&&!q.folded&&q.hole?.length)) return false;
+        if(m.id==='pocketstatic' && !ctx.deck.length) return false;
+        return true;
+    }
+    function manual(ctx,p,moduleId,targetId) {
+        const m=p?.mods?.find(x=>x.id===moduleId);
+        if(!m?.manual) return {ok:false,reason:'この能力は手動発動ではありません'};
+        if(!manualReady(m,ctx,p)) return {ok:false,reason:m.board&&ctx.board.length<3?'場札が3枚出るまで待ってください':'この勝負ではもう使えません'};
+        const q=m.targeted?ctx.players.find(x=>x.id===Number(targetId)&&x.id!==p.id&&!x.folded):null;
+        if(m.targeted&&!q) return {ok:false,reason:'対象を選んでください'};
+        let copy='', event;
+        if(m.id==='downshift') {
+            const index=q.hole.reduce((best,c,i,a)=>c.r>a[best].r?i:best,0);
+            q.hole[index]={...q.hole[index],r:Math.max(2,q.hole[index].r-2)};
+            copy='最高札の数字を −2（内容は非公開）';
+        } else if(m.id==='pocketstatic') {
+            const index=Math.floor(Math.random()*q.hole.length), old=q.hole[index];
+            q.hole[index]=ctx.deck.pop();ctx.deck.unshift(old);
+            copy='手札1枚をランダム交換（内容は非公開）';
+        } else if(m.id==='suitburn') {
+            const index=Math.floor(Math.random()*q.hole.length);
+            q.hole[index]={...q.hole[index],s:'♣'};
+            copy='手札1枚のスートを ♣ に変更（内容は非公開）';
+        } else if(m.id==='ranklock') {
+            const index=q.hole.reduce((best,c,i,a)=>c.r>a[best].r?i:best,0);
+            q.hole[index]={...q.hole[index],r:Math.min(7,q.hole[index].r)};
+            copy='最高札を7以下にロック（内容は非公開）';
+        } else if(m.id==='boardscramble') {
+            const index=Math.floor(Math.random()*ctx.board.length), old=ctx.board[index], fresh=ctx.deck.pop();
+            ctx.board[index]=fresh;ctx.deck.unshift(old);
+            copy=`場札 ${index+1}枚目を ${fresh.s}${fresh.r>10?({11:'J',12:'Q',13:'K',14:'A'}[fresh.r]):fresh.r} に交換`;
+        } else if(m.id==='boardwipe') {
+            const fresh=ctx.board.map(()=>ctx.deck.pop()), old=ctx.board.splice(0,ctx.board.length,...fresh);
+            ctx.deck.unshift(...old);
+            copy=`場札 ${fresh.length}枚をすべて交換`;
+        } else if(m.id==='rankroulette') {
+            for(let i=0;i<ctx.board.length;i++)ctx.board[i]={...ctx.board[i],r:2+Math.floor(Math.random()*13)};
+            copy=`場札 ${ctx.board.length}枚の数字を再抽選`;
+        } else if(m.id==='suitstorm') {
+            const suits=['♠','♥','♦','♣'];
+            for(let i=0;i<ctx.board.length;i++)ctx.board[i]={...ctx.board[i],s:suits[Math.floor(Math.random()*4)]};
+            copy=`場札 ${ctx.board.length}枚のスートを再抽選`;
+        }
+        p.used ||= {};p.used['manual:'+m.id]=true;
+        event=emit(ctx,p,m,copy,q||p);
+        if(m.board){event.scope='board';event.targetName='BOARD';}
+        return {ok:true,event};
+    }
     function readout(p,ctx) {
         if(p.fogged)return ['SIGNAL FOG / 情報系無効'];
         const data=[];
@@ -137,5 +202,5 @@
         return data;
     }
     function rewardPool(p,won) {return catalog.filter(m=>!has(p,m.id)&&(won?m.tier>=2:m.tier===1));}
-    return {catalog,tiers,opening,action,street,result,rankCards,rankEvents,readout,rewardPool,has,usable};
+    return {catalog,tiers,opening,action,street,result,rankCards,rankEvents,manual,manualReady,readout,rewardPool,has,usable};
 });
