@@ -1,4 +1,12 @@
-# Minimal rhythm — current
+# Circle table — current
+
+Bold compact grotesk typography replaces the monospaced direction. White, vivid green
+and orange follow the supplied festival reference without reproducing its artwork.
+Seats orbit the green oval, relative to the current local viewer. Pixel cards remain.
+Ability receipts now launch a source-to-target ray and target ring, with a short bold
+banner. Reduced-motion mode omits the rays and rings.
+
+## Previous minimal rhythm foundation
 
 The active surface is now monochrome, unboxed and aligned like a sequencer: numbered
 street steps, a small turn indicator, tabular chip counts and flat action keys. Pixel

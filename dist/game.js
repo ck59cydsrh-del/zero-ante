@@ -116,6 +116,17 @@
             $("#chip-flight").append(chip); setTimeout(() => chip.remove(), 1100);
         }
     }
+    function abilitySignal(effect) {
+        const pod=$(".active-pod"), viewer=Number(pod.dataset.viewer);
+        const node=id=>id===viewer?pod:$(`.pos-${id}`);
+        const source=node(effect.owner), target=node(effect.target);
+        target?.classList.add("targeted");
+        if(!source||!target||matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+        const area=$(".game").getBoundingClientRect(), a=source.getBoundingClientRect(), b=target.getBoundingClientRect();
+        const x=a.x+a.width/2-area.x,y=a.y+a.height/2-area.y,tx=b.x+b.width/2-area.x,ty=b.y+b.height/2-area.y;
+        const wave=document.createElement("i");wave.className="ability-wave";wave.style.cssText=`--x:${tx}px;--y:${ty}px`;$("#burst").append(wave);setTimeout(()=>wave.remove(),1000);
+        if(effect.owner!==effect.target){const ray=document.createElement("i");ray.className="ability-ray";ray.style.cssText=`--x:${x}px;--y:${y}px;--distance:${Math.hypot(tx-x,ty-y)}px;--angle:${Math.atan2(ty-y,tx-x)}rad`;$("#burst").append(ray);setTimeout(()=>ray.remove(),800);}
+    }
     const mods = Rogue.catalog;
     let rewardQueue = [], rewardOwner = null, roundWinners=[], lastActionText="", localNames=[];
     const safeName=(value,i)=>String(value||"").replace(/[^\p{L}\p{N} _ー・-]/gu,"").trim().slice(0,12)||`プレイヤー${i+1}`;
@@ -294,6 +305,8 @@
         document.querySelectorAll(".targeted,.fired").forEach(n=>n.classList.remove("targeted","fired"));
         if(item.effect){
             const e=item.effect;
+            el.classList.add("ability-hit");
+            abilitySignal(e);
             $("#effect-receipt").innerHTML=`<b>${e.ownerName} → ${e.targetName}</b><span>${e.name}</span><span>${e.copy}</span>`;
             $(`.pos-${e.target}`)?.classList.add("targeted");
             $(`[data-module="${e.id}"]`)?.classList.add("fired");
@@ -792,7 +805,14 @@
             `${actionPlayer?.name || "TABLE"} TO ACT`;
         let due = Math.max(0, currentBet - (actionPlayer?.bet || 0));
         $(".active-pod").dataset.active = String(canAct);
-        document.querySelectorAll(".h-seat").forEach((seat, i) => { seat.hidden = i === viewer?.id; });
+        $(".active-pod").dataset.viewer=String(viewer?.id??0);
+        const opponents=P.filter(p=>p.id!==viewer?.id);
+        const orbit={1:[[50,22]],2:[[25,28],[75,28]],3:[[14,52],[50,22],[86,52]],4:[[12,58],[32,24],[68,24],[88,58]],5:[[11,60],[25,28],[50,19],[75,28],[89,60]]}[opponents.length]||[];
+        document.querySelectorAll(".h-seat").forEach((seat, i) => {
+            seat.hidden = i === viewer?.id;
+            const at=opponents.findIndex(p=>p.id===i),pos=orbit[at];
+            if(pos){seat.style.setProperty("--seat-x",pos[0]+"%");seat.style.setProperty("--seat-y",pos[1]+"%");}
+        });
         $("#checkcall").innerHTML = due ?
             `CALL <small>${Math.min(due, actionPlayer.chips)}</small>` :
             "CHECK";
