@@ -65,28 +65,11 @@
 
     try { setTheme(localStorage.getItem("zero-ante-theme") || "light", false); }
     catch (_) { setTheme("light", false); }
-    let soundEnabled = false, audioContext;
+    const soundEngine = typeof GameSound !== "undefined" ? GameSound.create(window.Audio) : null;
+    let soundEnabled = false;
     function cue(kind) {
-        if (!soundEnabled || !audioContext) return;
-        const victory=kind==="win";
-        const heavy=["allin","attack","chaos","raise"].includes(kind);
-        const notes=({win:[523,659,784,1047,1319,1568],check:[880],fold:[330,165],call:[659,880],raise:[220,330,494],allin:[110,165,220,440,880],defeat:[392,294,196],attack:[130,260],chaos:[277,415,554],guard:[440,554,659],info:[740,988],street:[523,659]})[kind]||[392,523];
-        const now=audioContext.currentTime;
-        notes.forEach((frequency,i)=>{
-            const osc=audioContext.createOscillator(),gain=audioContext.createGain();
-            const t=now+i*(victory?.085:.05),length=victory?.48:.18;
-            osc.type=heavy?"sawtooth":"triangle";osc.frequency.setValueAtTime(frequency,t);
-            if(heavy) osc.frequency.exponentialRampToValueAtTime(frequency*.5,t+length);
-            gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(heavy?.018:.045,t+.006);
-            gain.gain.exponentialRampToValueAtTime(.001,t+length);
-            osc.connect(gain).connect(audioContext.destination);osc.start(t);osc.stop(t+length+.02);
-        });
-        if(victory||heavy){
-            const bass=audioContext.createOscillator(),gain=audioContext.createGain();
-            bass.frequency.setValueAtTime(victory?160:95,now);bass.frequency.exponentialRampToValueAtTime(42,now+.28);
-            gain.gain.setValueAtTime(.09,now);gain.gain.exponentialRampToValueAtTime(.001,now+.34);
-            bass.connect(gain).connect(audioContext.destination);bass.start(now);bass.stop(now+.36);
-        }
+        if (!soundEnabled || !soundEngine) return false;
+        return soundEngine.play(kind);
     }
     function impact(kind) {
         if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -739,6 +722,7 @@
         offers=rewardChoices(shuffle([...pool]),won,previous);
         rewardWon=won;
         rewardOwner=p; phase="draft"; deadline=0;
+        if(!reroll)cue("reward");
         $("#relic-title").textContent = `${p.name}、能力を1つ選ぼう`;
         $("#relic .eyebrow").textContent=won?(pool.some(m=>m.tier===3)?"VICTORY DROP / 伝説候補が必ず1つ":"VICTORY DROP / レア報酬"):"COMEBACK DROP / 次の勝負に持ち越そう";
         const canReroll=rerollsLeft>0&&pool.some(m=>!offers.some(o=>o.id===m.id));
@@ -917,15 +901,15 @@
         }
     }
     $("#start").onclick = init;
-    $("#sound-toggle").onclick = async () => {
-        try {
-            audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
-            await audioContext.resume();
-            soundEnabled = !soundEnabled;
-            $("#sound-toggle").textContent = soundEnabled ? "SOUND ON" : "SOUND OFF";
-            $("#sound-toggle").setAttribute("aria-pressed", String(soundEnabled));
-            if (soundEnabled) cue("action");
-        } catch (_) { $("#sound-toggle").textContent = "SOUND unavailable"; }
+    $("#sound-toggle").onclick = () => {
+        if (!soundEngine) {
+            $("#sound-toggle").textContent = "SOUND unavailable";
+            return;
+        }
+        soundEnabled = soundEngine.setEnabled(!soundEnabled);
+        $("#sound-toggle").textContent = soundEnabled ? "SOUND ON" : "SOUND OFF";
+        $("#sound-toggle").setAttribute("aria-pressed", String(soundEnabled));
+        if (soundEnabled) cue("action");
     };
     document.querySelectorAll('input[name="theme"]').forEach((input) => {
         input.addEventListener("change", () => setTheme(input.value));
