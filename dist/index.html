@@ -10,11 +10,11 @@
     <meta property="og:description" content="32種類の能力と勝利・敗北の報酬。独自ローグルールで遊ぶホールデム。">
     <meta property="og:image" content="https://odd-even-rogue-duel.yuhgamiya.chatgpt.site/og.png">
     <title>ZERO//ANTE — TOURNAMENT HOLD'EM</title>
-    <link rel="stylesheet" href="style.css?v=24">
-    <link rel="stylesheet" href="immersive.css?v=24">
-    <link rel="stylesheet" href="clarity-game.css?v=24">
-    <link rel="stylesheet" href="instrument.css?v=24">
-    <link rel="stylesheet" href="circle.css?v=24">
+    <link rel="stylesheet" href="style.css?v=25">
+    <link rel="stylesheet" href="immersive.css?v=25">
+    <link rel="stylesheet" href="clarity-game.css?v=25">
+    <link rel="stylesheet" href="instrument.css?v=25">
+    <link rel="stylesheet" href="circle.css?v=25">
 </head>
 
 <body data-theme="light">
@@ -28,7 +28,7 @@
             <div class="circuit-table" aria-hidden="true"><div class="circuit-border"></div><span class="board-label">ZA–01 / CLOSED CIRCUIT</span></div><div id="chip-flight" aria-hidden="true"></div><div id="burst" aria-hidden="true"></div>
             <div class="genre-key"><span class="info">INFO</span><span class="attack">ATTACK</span><span class="guard">GUARD</span><span class="chaos-key">CHAOS</span></div>
             <aside class="action-feed"><b>LIVE FEED</b><div id="action-log"><span>テーブルを準備中...</span></div></aside>
-            <div id="event-fx" class="event-fx hidden" aria-live="assertive"><small id="event-type">SYSTEM</small><strong id="event-title">ROUND START</strong><span id="event-copy"></span></div>
+            <div id="event-fx" class="event-fx hidden" aria-live="assertive"><small id="event-type">SYSTEM</small><div id="event-route" class="event-route" hidden><b id="effect-source"></b><i>→</i><b id="effect-target"></b></div><strong id="event-title">ROUND START</strong><span id="event-copy"></span></div>
             <div id="seats" class="seats"></div>
             <div id="turn-banner" class="turn-banner" aria-live="polite"><strong>対戦を始めよう</strong><span>名前と人数を設定してください</span></div>
             <aside id="effect-receipt" class="effect-receipt" aria-live="polite"></aside>
@@ -38,7 +38,7 @@
                 <div id="table-msg" class="glitch">WAITING FOR TABLE</div>
             </div>
             <div class="active-pod holdem-pod">
-                <div class="active-meta"><span id="active-name">PLAYER_01</span><b id="turn-info">TO ACT</b></div>
+                <div class="active-meta"><span id="active-name">PLAYER_01</span><span id="viewer-status" class="viewer-status"></span><b id="turn-info">TO ACT</b></div>
                 <div id="guidance" class="guidance"><b>01</b><span>テーブルを開くと、ここにあなたの2枚が表向きで表示されます。</span></div>
                 <div id="module-tray" class="module-tray"><span class="empty">MODULE SLOT / EMPTY</span></div>
                 <div class="hole-wrap">
@@ -105,9 +105,9 @@
             <p><b class="chaos-key">CHAOS</b>6枚目の場札など、その試合だけルールを改変。</p>
         </div><p>各ハンド終了後、勝者はレア／伝説、敗者は通常能力を1つ獲得。能力ボタンを押すと条件と直近の発動結果を確認できます。チップ追加・報酬能力は銀行からチップを追加します。書換能力では同一札も許容し、5枚同ランクはFIVE OF A KIND（最上位）です。</p><small>ホールデムを土台にした独自ローグルールです。公式大会と同じルールではありません。</small>
     </dialog>
-    <script src="rogue.js?v=24"></script>
-    <script src="sound.js?v=24"></script>
-    <script src="game.js?v=24"></script>
+    <script src="rogue.js?v=25"></script>
+    <script src="sound.js?v=25"></script>
+    <script src="game.js?v=25"></script>
 </body>
 
 </html>

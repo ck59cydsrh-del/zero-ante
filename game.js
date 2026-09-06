@@ -111,12 +111,13 @@
         const pod=$(".active-pod"), viewer=Number(pod.dataset.viewer);
         const node=id=>id===viewer?pod:$(`.pos-${id}`);
         const source=node(effect.owner), target=node(effect.target);
-        target?.classList.add("targeted");
+        source?.classList.add("casting");
+        target?.classList.add("targeted",effect.cat==="attack"?"debuff-hit":"buff-hit");
         if(!source||!target||matchMedia("(prefers-reduced-motion: reduce)").matches)return;
         const area=$(".game").getBoundingClientRect(), a=source.getBoundingClientRect(), b=target.getBoundingClientRect();
         const x=a.x+a.width/2-area.x,y=a.y+a.height/2-area.y,tx=b.x+b.width/2-area.x,ty=b.y+b.height/2-area.y;
-        const wave=document.createElement("i");wave.className="ability-wave";wave.style.cssText=`--x:${tx}px;--y:${ty}px`;$("#burst").append(wave);setTimeout(()=>wave.remove(),1000);
-        if(effect.owner!==effect.target){const ray=document.createElement("i");ray.className="ability-ray";ray.style.cssText=`--x:${x}px;--y:${y}px;--distance:${Math.hypot(tx-x,ty-y)}px;--angle:${Math.atan2(ty-y,tx-x)}rad`;$("#burst").append(ray);setTimeout(()=>ray.remove(),800);}
+        const wave=document.createElement("i");wave.className=`ability-wave ${effect.cat}`;wave.style.cssText=`--x:${tx}px;--y:${ty}px`;$("#burst").append(wave);setTimeout(()=>wave.remove(),1100);
+        if(effect.owner!==effect.target){const ray=document.createElement("i");ray.className=`ability-ray ${effect.cat}`;ray.style.cssText=`--x:${x}px;--y:${y}px;--distance:${Math.hypot(tx-x,ty-y)}px;--angle:${Math.atan2(ty-y,tx-x)}rad`;$("#burst").append(ray);setTimeout(()=>ray.remove(),900);}
     }
     const mods = Rogue.catalog;
     let rewardQueue = [], rewardOwner = null, roundWinners=[], lastActionText="", localNames=[], rewardWon=false, rerollsLeft=0;
@@ -140,7 +141,7 @@
     function publishEffects(ctx) {
         for (const e of ctx.events) {
             pushLog(`${e.ownerName} → ${e.targetName} / ${e.name} / ${e.copy}`, e.cat);
-            fxQueue.push({type:`${e.ownerName} → ${e.targetName}`,title:e.name,copy:e.copy,kind:e.cat,duration:1650,effect:e});
+            fxQueue.push({type:`${e.cat.toUpperCase()} MODULE`,title:e.name,copy:e.copy,kind:e.cat,duration:e.cat==="attack"?2100:1850,effect:e});
         }
         if (!fxBusy) playNextFx();
     }
@@ -301,14 +302,22 @@
         $("#event-type").textContent = item.type;
         $("#event-title").textContent = item.title;
         $("#event-copy").textContent = item.copy;
-        document.querySelectorAll(".targeted,.fired").forEach(n=>n.classList.remove("targeted","fired"));
+        const route=$("#event-route");
+        route.hidden=!item.effect;
+        document.querySelectorAll(".targeted,.fired,.casting,.debuff-hit,.buff-hit").forEach(n=>n.classList.remove("targeted","fired","casting","debuff-hit","buff-hit"));
         if(item.effect){
             const e=item.effect;
             el.classList.add("ability-hit");
+            el.dataset.category=e.cat;
+            $("#effect-source").textContent=e.ownerName;
+            $("#effect-target").textContent=e.targetName;
             abilitySignal(e);
-            $("#effect-receipt").innerHTML=`<b>${e.ownerName} → ${e.targetName}</b><span>${e.name}</span><span>${e.copy}</span>`;
+            $("#effect-receipt").className=`effect-receipt receipt-${e.cat}`;
+            $("#effect-receipt").innerHTML=`<header><em>${e.cat.toUpperCase()}</em><b>${e.ownerName} → ${e.targetName}</b></header><strong>${e.name}</strong><span>${e.copy}</span>`;
             $(`.pos-${e.target}`)?.classList.add("targeted");
             $(`[data-module="${e.id}"]`)?.classList.add("fired");
+        }else{
+            delete el.dataset.category;
         }
         setTimeout(() => {
             el.classList.add("out");
@@ -767,6 +776,19 @@
         return `<i class="card suit-${suit} ${hot ? "hot" : ""}" style="--i:${i}"><span class="corner top"><b>${rank}</b><em>${c.s}</em></span><strong class="pip" aria-label="${c.s}"></strong><span class="corner bottom"><b>${rank}</b><em>${c.s}</em></span></i>`;
     }
 
+    function playerStatuses(p,currentStreet) {
+        const states=[];
+        if(p.silenced&&currentStreet==="pre")states.push({code:"RAISE LOCK",copy:"この回は増額不可",kind:"debuff"});
+        if(p.guardJammed)states.push({code:"GUARD OFF",copy:"チップ補助が無効",kind:"debuff"});
+        if(p.fogged)states.push({code:"NO INFO",copy:"情報能力が無効",kind:"debuff"});
+        if(p.exposed)states.push({code:"OPEN CARD",copy:"手札1枚を公開中",kind:"debuff"});
+        if(p.allin)states.push({code:"ALL-IN",copy:"全チップ投入済み",kind:"danger"});
+        return states;
+    }
+    function statusMarkup(p,currentStreet) {
+        return playerStatuses(p,currentStreet).map(s=>`<i class="${s.kind}" title="${s.copy}"><b>${s.code}</b><span>${s.copy}</span></i>`).join("");
+    }
+
     function render(show = false) {
         let [S, B] = LEVELS[level];
         $("#level").textContent = String(level + 1).padStart(2, "0");
@@ -801,7 +823,7 @@
         }
         $("#seats").innerHTML = P.map(
             (p, i) =>
-            `<article class="h-seat pos-${i} ${i === actor && (phase === "act" || phase === "cpu") ? "acting" : ""} ${p.folded ? "folded" : ""} ${show && !p.folded ? "showing" : ""}"><div class="avatar">${i + 1}</div><header><b>${p.name}</b><span>${i === dealer ? "D " : ""}${i === sb ? "SB " : ""}${i === bb ? "BB" : ""}</span></header><div class="seat-bank"><span class="mini-chip chip-c${i % 4}"></span><strong>${p.chips}</strong></div><small>${p.last}</small><div class="seat-mods">${p.mods.map((m) => `<i class="${m.cat}" title="${m.name}">${m.icon}</i>`).join("")}</div><div class="tiny-cards">${show && !p.folded ? p.hole.map((c, j) => card(c, j)).join("") : p.hole.map((c, j) => p.exposed && j === 0 ? card(c,j) : card(null, j, true)).join("")}</div></article>`,
+            `<article class="h-seat pos-${i} ${i === actor && (phase === "act" || phase === "cpu") ? "acting" : ""} ${p.folded ? "folded" : ""} ${show && !p.folded ? "showing" : ""}"><div class="avatar">${i + 1}</div><header><b>${p.name}</b><span>${i === dealer ? "D " : ""}${i === sb ? "SB " : ""}${i === bb ? "BB" : ""}</span></header><div class="seat-bank"><span class="mini-chip chip-c${i % 4}"></span><strong>${p.chips}</strong></div><small>${p.last}</small><div class="status-strip">${statusMarkup(p,street)}</div><div class="seat-mods">${p.mods.map((m) => `<i class="${m.cat}" title="${m.name}">${m.icon}</i>`).join("")}</div><div class="tiny-cards">${show && !p.folded ? p.hole.map((c, j) => card(c, j)).join("") : p.hole.map((c, j) => p.exposed && j === 0 ? card(c,j) : card(null, j, true)).join("")}</div></article>`,
         ).join("");
         const actionPlayer = P[actor] || P[0];
         const viewer = mode === "solo" ? P[0] : actionPlayer;
@@ -817,6 +839,7 @@
             lastHoleKey = holeKey;
         }
         $("#active-name").textContent = `${viewer?.name || "あなた"} の手札`;
+        $("#viewer-status").innerHTML=viewer?statusMarkup(viewer,street):"";
         $("#turn-info").textContent = phase === "showdown" ?
             "CARDS REVEALED" :
             phase === "won" ?
