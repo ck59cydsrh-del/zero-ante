@@ -33,3 +33,13 @@ body[data-theme="dark"]{--paper:#103822;--panel:#103822;--ink:#f2f3e9;--line:#4b
 @keyframes feltPulse{0%{box-shadow:inset 0 0 0 7px #006f29}25%{box-shadow:inset 0 0 0 9px #ff7135,inset 0 0 60px #d7ff9670}100%{box-shadow:inset 0 0 0 7px #006f29}}
 @keyframes feltWin{0%{box-shadow:inset 0 0 0 7px #006f29}25%{box-shadow:inset 0 0 0 12px #ff7135,inset 0 0 100px #e5ffac80}100%{box-shadow:inset 0 0 0 7px #006f29}}
 @media(prefers-reduced-motion:reduce){.game .electro-ring,.game .event-fx.ability-hit::after{display:none}.game .circuit-table.pulse,.game .circuit-table.win-pulse{animation:none}}
+
+/* Always-white stage. Rewards carry the escalation. */
+:root,body,body[data-theme="light"],body[data-theme="dark"]{--paper:#fff;--panel:#fff;--ink:#111;--line:#111;--muted:#505050;background:#fff;color:#111}
+#theme-toggle,.theme-picker{display:none!important}
+.game #reroll-reward{width:auto;min-height:38px;margin:18px 0 0 auto;border:1px solid #111;background:#fff;color:#111;font:700 12px var(--ui);padding:9px 16px}.game #reroll-reward:disabled{opacity:.4}
+.game .chaos-cards button{animation:rewardReveal .48s cubic-bezier(.16,1,.3,1) both}.game .chaos-cards button:nth-child(2){animation-delay:.1s}.game .chaos-cards button:nth-child(3){animation-delay:.2s}.game .chaos-cards button[data-tier="3"]{background:#fff1e8;border:2px solid #ef5828;padding:18px 14px;position:relative;overflow:hidden}.game .chaos-cards button[data-tier="3"]::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,#fff9 48%,transparent 62%);animation:legendSweep 1.2s ease-out .4s both;pointer-events:none}
+.game .round-result[data-streak="2"]{border:3px solid #ef5828}.game .round-result[data-streak="3"]{border:3px solid #ef5828;box-shadow:8px 8px 0 #00872e,0 0 0 100vmax #ffffffdd}.game .round-result[data-streak="2"] h2,.game .round-result[data-streak="3"] h2{color:#d74a20!important}
+.game .event-fx.win{animation:victoryPunch .55s cubic-bezier(.16,1,.3,1) both}.game .event-fx.ability-hit{animation:abilityBanner .45s cubic-bezier(.18,.8,.2,1) both}
+@keyframes rewardReveal{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:none}}@keyframes legendSweep{from{transform:translateX(-120%)}to{transform:translateX(120%)}}@keyframes victoryPunch{0%{opacity:0;transform:translate(-50%,-50%) scale(.8)}65%{opacity:1;transform:translate(-50%,-50%) scale(1.04)}100%{transform:translate(-50%,-50%) scale(1)}}
+@media(prefers-reduced-motion:reduce){.game .chaos-cards button,.game .event-fx.win{animation:none}.game .chaos-cards button[data-tier="3"]::after{display:none}}

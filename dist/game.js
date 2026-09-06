@@ -46,7 +46,7 @@
         actionHideTimer = 0;
 
     function setTheme(value, remember = true) {
-        const theme = value === "dark" ? "dark" : "light";
+        const theme = "light";
         document.body.dataset.theme = theme;
         document.querySelectorAll('input[name="theme"]').forEach((input) => {
             input.checked = input.value === theme;
@@ -133,7 +133,15 @@
         if(effect.owner!==effect.target){const ray=document.createElement("i");ray.className="ability-ray";ray.style.cssText=`--x:${x}px;--y:${y}px;--distance:${Math.hypot(tx-x,ty-y)}px;--angle:${Math.atan2(ty-y,tx-x)}rad`;$("#burst").append(ray);setTimeout(()=>ray.remove(),800);}
     }
     const mods = Rogue.catalog;
-    let rewardQueue = [], rewardOwner = null, roundWinners=[], lastActionText="", localNames=[];
+    let rewardQueue = [], rewardOwner = null, roundWinners=[], lastActionText="", localNames=[], rewardWon=false, rerollsLeft=0;
+    function rewardChoices(pool,won,previous=[]) {
+        const fresh=pool.filter(m=>!previous.includes(m.id));
+        const ordered=[...fresh,...pool.filter(m=>previous.includes(m.id))];
+        const selected=ordered.slice(0,3);
+        const legendary=ordered.find(m=>m.tier===3);
+        if(won&&legendary&&!selected.some(m=>m.tier===3))selected[selected.length-1]=legendary;
+        return selected;
+    }
     const safeName=(value,i)=>String(value||"").replace(/[^\p{L}\p{N} _ー・-]/gu,"").trim().slice(0,12)||`プレイヤー${i+1}`;
     const roleName = name => ({"HIGH CARD":"ハイカード","ONE PAIR":"ワンペア","TWO PAIR":"ツーペア","THREE":"スリーカード","STRAIGHT":"ストレート","FLUSH":"フラッシュ","FULL HOUSE":"フルハウス","FOUR":"フォーカード","STRAIGHT FLUSH":"ストレートフラッシュ","ROYAL FLUSH":"ロイヤルフラッシュ","FIVE OF A KIND":"ファイブカード"})[name]||name;
     function nameFields(){
@@ -673,11 +681,15 @@
 
     function afterHand(winners) {
         afterEffects(()=>{
+            P.filter(p=>p.participated).forEach(p=>{p.streak=winners.includes(p)?(p.streak||0)+1:0;});
             roundWinners=winners; phase="round-result";
             const lost=mode==="solo"&&!winners.some(p=>p.human);
             $("#round-eyebrow").textContent=`HAND ${String(handNo).padStart(2,"0")} / RESULT`;
             $("#round-title").textContent=mode==="solo"?(lost?"あなたの負け":"あなたの勝ち！"):`${winners.map(p=>p.name).join("・")} の勝ち！`;
             $("#round-result").dataset.outcome=lost?"lost":"won";
+            const chain=Math.max(...winners.map(p=>p.streak));
+            $("#round-result").dataset.streak=String(Math.min(chain,3));
+            if(chain>1)$("#round-title").textContent+=` / ${chain} WIN STREAK`;
             $("#round-summary").textContent=`${winners.map(p=>p.name).join(" / ")} — ${winners[0].rank?roleName(winners[0].rank.name):"全員FOLD"}`;
             const runner=P.filter(p=>p.rank&&!winners.includes(p)).sort((a,b)=>cmp(b.rank,a.rank))[0];
             if(runner && winners[0].rank.cat===runner.rank.cat){
@@ -715,22 +727,32 @@
         if(!reward) {afterEffects(newHand);return;}
         draft(reward.p,reward.won);
     }
-    function draft(p,won) {
+    function draft(p,won,reroll=false) {
         const pool=Rogue.rewardPool(p,won);
         if(!pool.length) {
             p.chips+=won?80:20;
             pushLog(`${p.name} / 全能力取得済み → +${won?80:20}`,"guard");
             nextReward(); return;
         }
-        offers=shuffle([...pool]).slice(0,3);
+        const previous=reroll?offers.map(m=>m.id):[];
+        if(!reroll)rerollsLeft=1;
+        offers=rewardChoices(shuffle([...pool]),won,previous);
+        rewardWon=won;
         rewardOwner=p; phase="draft"; deadline=0;
         $("#relic-title").textContent = `${p.name}、能力を1つ選ぼう`;
-        $("#relic .eyebrow").textContent=won?"勝利報酬 / レア・伝説":"敗北報酬 / 通常 — 次の勝負で役立てよう";
+        $("#relic .eyebrow").textContent=won?(pool.some(m=>m.tier===3)?"VICTORY DROP / 伝説候補が必ず1つ":"VICTORY DROP / レア報酬"):"COMEBACK DROP / 次の勝負に持ち越そう";
+        const canReroll=rerollsLeft>0&&pool.some(m=>!offers.some(o=>o.id===m.id));
+        $("#reroll-reward").disabled=!canReroll;
+        $("#reroll-reward").textContent=rerollsLeft?"REROLL / 1回だけ引き直す":"REROLL USED";
         $("#draft-time").textContent="時間制限なし";
         $("#relic-cards").innerHTML=offers.map((m,i)=>`<button data-i="${i}" data-tier="${m.tier}" class="mod-${m.cat}"><span>${CAT[m.cat]} · <b class="rarity">${Rogue.tiers[m.tier]}</b></span><i>${m.icon}</i><h3>${m.name}</h3><p>${m.desc}</p><em>この能力をもらう →</em></button>`).join("");
         $("#relic-cards").querySelectorAll("button").forEach(b=>b.onclick=()=>choose(p,+b.dataset.i));
         $("#relic").classList.remove("hidden");
     }
+    $("#reroll-reward").onclick=()=>{
+        if(phase!=="draft"||!rerollsLeft||$("#reroll-reward").disabled)return;
+        rerollsLeft=0;cue("chaos");draft(rewardOwner,rewardWon,true);
+    };
     function choose(p,i) {
         if(phase!=="draft" || p!==rewardOwner || !offers[i])return;
         const picked=offers[i]; offers=[];
