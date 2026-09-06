@@ -95,7 +95,12 @@
         requestAnimationFrame(() => table.classList.add(kind === "win" ? "win-pulse" : "pulse"));
         if (kind !== "win" && kind !== "attack" && kind !== "chaos") return;
         const area = $(".game").getBoundingClientRect(), center = $("#pot").getBoundingClientRect();
-        const particles=kind==="win"?54:28;
+        const particles=kind==="win"?76:36;
+        for(let r=0;r<(kind==="win"?3:2);r++){
+            const ring=document.createElement("i");ring.className="electro-ring";
+            ring.style.cssText=`--cx:${center.x+center.width/2-area.x}px;--cy:${center.y+center.height/2-area.y}px;--delay:${r*.12}s`;
+            $("#burst").append(ring);setTimeout(()=>ring.remove(),1600);
+        }
         for (let i = 0; i < particles; i++) {
             const spark = document.createElement("i"), angle = i * Math.PI * 2 / particles;
             spark.className = "spark";
