@@ -410,6 +410,8 @@
             }
         } catch (e) { linkState("コードを読めませんでした"); }
     }
+    // 横持ちのすすめ。縦でも遊べるようにしてあるので、断れる形にしておく。
+    $("#rotate-stay").onclick = () => { document.body.dataset.rotateOk = "1"; };
     $("#be-host").onclick = startHostLink;
     $("#be-guest").onclick = startGuestLink;
     $("#link-apply").onclick = applyLinkCode;

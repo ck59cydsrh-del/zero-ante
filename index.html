@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+JP:wght@400;600&display=swap">
-    <link rel="stylesheet" href="techno.css?v=35">
+    <link rel="stylesheet" href="techno.css?v=46">
 </head>
 
 <body data-theme="light">
@@ -178,11 +178,17 @@
             <p><b>ローカル通信</b>対戦モードで「別の端末と対戦」を選ぶ。片方が<em>ホスト</em>になって出た合図コードを相手に渡し、相手が貼って返したコードをホストが貼れば直接つながる。中継サーバは通らないので、同じ Wi-Fi の2台で完結する。卓はホスト側が持ち、ゲストの画面には自分の手札しか送られない。</p>
         </div><p>書き換え能力では同じ札が重なることがあり、5枚同ランクは FIVE OF A KIND（最上位）として扱います。</p><small>ホールデムを土台にした独自ローグルールです。公式大会と同じルールではありません。</small>
     </dialog>
+    <div id="rotate" class="rotate">
+        <div><b>横にしてください</b>
+            <p>6人の卓と手元を同時に見るには、横持ちのほうがずっと見やすくなります。</p>
+            <button id="rotate-stay" type="button">このまま縦で続ける</button>
+        </div>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
-    <script src="rogue.js?v=35"></script>
-    <script src="sound.js?v=35"></script>
-    <script src="net.js?v=35"></script>
-    <script src="game.js?v=35"></script>
+    <script src="rogue.js?v=46"></script>
+    <script src="sound.js?v=46"></script>
+    <script src="net.js?v=46"></script>
+    <script src="game.js?v=46"></script>
 </body>
 
 </html>
