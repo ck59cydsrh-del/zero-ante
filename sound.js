@@ -82,7 +82,7 @@
             source.start();
             source.stop(context.currentTime + duration + .01);
         }
-        function play(kind) {
+        function play(kind, level = 0) {
             if (!enabled) return false;
             init();
             if (context.state === "suspended") context.resume().catch(() => {});
@@ -90,8 +90,14 @@
             if (kind === "raise") momentum = Math.min(4, momentum + 1);
             else if (kind === "allin") momentum = 4;
             else if (["fold", "street", "defeat", "win"].includes(kind)) momentum = 0;
-            const shift = kind === "raise" ? 2 ** (momentum / 24) : 1;
+            const step = Math.max(0, Math.min(7, level | 0));
+            const shift = kind === "raise" ? 2 ** (momentum / 24) : 2 ** (step / 12);
             cue.notes.forEach((note) => tone(note, shift));
+            // 大きい打点は1オクターブ上を薄く重ねる。同じ音が「厚くなる」ほうが効く。
+            if (step >= 3) cue.notes.forEach((note) => tone([
+                note[0] * 2, (note[1] || 0) + .05, (note[2] || .2) * .8, "sine",
+                (note[4] || .04) * .45, note[5] ? note[5] * 2 : undefined,
+            ], shift));
             if (cue.sub) sub(cue.sub);
             if (cue.noise) noise(cue.noise);
             return true;

@@ -1,7 +1,65 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const vm=require('node:vm');const path=require('node:path');
 const code=fs.readFileSync(path.join(__dirname,'../game.js'),'utf8');
-const fn=code.slice(code.indexOf('    function abilitySignal('),code.indexOf('    const mods ='));
-function signal(owner,target,reduced=false,cat='attack'){const added=[],timers=[],marked=[];const node=(id,x)=>({dataset:{viewer:'0'},classList:{add:(...classes)=>classes.forEach(c=>marked.push([id,c]))},getBoundingClientRect:()=>({x,y:20,width:100,height:50})});const pod=node('pod',10),opponent=node('opponent',300),area=node('area',0);const ctx={$:s=>s==='.active-pod'?pod:s==='.game'?area:s==='#burst'?{append:e=>added.push(e)}:opponent,matchMedia:()=>({matches:reduced}),document:{createElement:()=>({style:{},remove(){this.removed=true}})},setTimeout:f=>timers.push(f)};vm.runInNewContext(fn+`;abilitySignal({owner:${owner},target:${target},cat:${JSON.stringify(cat)}});`,ctx);return{added,timers,marked};}
-test('targeted opponent gets a categorized ray and ring; geometry is finite',()=>{const r=signal(0,1);assert.deepEqual(r.added.map(x=>x.className),['ability-wave attack','ability-ray attack']);assert.ok(r.added.every(x=>!x.style.cssText.includes('NaN')));assert.ok(r.marked.some(([id])=>id==='opponent'));assert.ok(r.marked.some(([id,c])=>id==='pod'&&c==='casting'));assert.ok(r.marked.some(([id,c])=>id==='opponent'&&c==='debuff-hit'));r.timers.forEach(f=>f());assert.ok(r.added.every(x=>x.removed));});
-test('self ability uses the visible player panel and a ring without a ray',()=>{const r=signal(0,0);assert.equal(r.added.length,1);assert.equal(r.marked[0][0],'pod');});
-test('reduced motion retains static source and target feedback without moving effects',()=>{const r=signal(0,1,true);assert.equal(r.added.length,0);assert.ok(r.marked.some(([id,c])=>id==='opponent'&&c==='targeted'));assert.ok(r.marked.some(([id,c])=>id==='opponent'&&c==='debuff-hit'));});
+const fn=code.slice(code.indexOf('    let signalTimer = 0;'),code.indexOf('    const mods ='));
+
+// 撃った先を線で結ぶ（kozakiの指示でビームを復活させた）。
+// 席の印は残したまま、source と target が違うときだけビームが飛ぶ。
+function signal(owner,target,{reduced=false,cat='attack',scope,viewer=0}={}){
+  const beams=[],pops=[],marked=[],cleanup=[];
+  const node=id=>({dataset:{viewer:String(viewer)},classList:{add:(...c)=>c.forEach(x=>marked.push([id,x]))}});
+  const pod=node('pod'),opponent=node('opponent'),board=node('board');
+  const ctx={
+    $:s=>s==='.active-pod'?pod:s==='#board'?board:opponent,
+    beam:(from,to,c)=>{if(!reduced&&from&&to&&from!==to)beams.push(c)},
+    popAt:(n,text)=>pops.push(text),
+    matchMedia:()=>({matches:reduced}),
+    // 印は自分で消える。消えないと最後の一発が墨のまま残る（実機で操作盤が真っ黒になった）
+    setTimeout:(fn,ms)=>{cleanup.push(ms);return 1},
+    clearTimeout:()=>{},
+    document:{querySelectorAll:()=>[]},
+  };
+  vm.runInNewContext(fn+`;abilitySignal({owner:${owner},target:${target},name:'RANK DROP',cat:${JSON.stringify(cat)},scope:${JSON.stringify(scope)}});`,ctx);
+  return{beams,pops,marked,cleanup};
+}
+
+test('an attack marks the caster, inverts the target and fires a beam',()=>{
+  const r=signal(0,1,{viewer:0});
+  assert.deepEqual(r.beams,['attack'],'a beam should travel from caster to target');
+  assert.ok(r.marked.some(([id,c])=>id==='pod'&&c==='casting'));
+  assert.ok(r.marked.some(([id,c])=>id==='opponent'&&c==='targeted'));
+  assert.ok(r.marked.some(([id,c])=>id==='opponent'&&c==='debuff-hit'));
+});
+
+test('a self-cast marks but never fires a beam at itself',()=>{
+  const r=signal(0,0,{viewer:0});
+  assert.deepEqual(r.beams,[],'nothing should be fired at your own seat');
+});
+
+test('a friendly effect marks the target as a buff, not a debuff',()=>{
+  const r=signal(0,1,{cat:'guard'});
+  assert.ok(r.marked.some(([id,c])=>id==='opponent'&&c==='buff-hit'));
+  assert.ok(!r.marked.some(([,c])=>c==='debuff-hit'));
+});
+
+test('a board-scope effect marks the board rather than a seat',()=>{
+  const r=signal(0,1,{cat:'chaos',scope:'board'});
+  assert.ok(r.marked.some(([id,c])=>id==='board'&&c==='board-hit'));
+});
+
+test('being hit yourself says so on your own rail',()=>{
+  // 自分が撃たれたときは「何を受けたか」を手前に出す
+  const r=signal(1,0,{viewer:0});
+  assert.ok(r.pops.some((t)=>/RANK DROP/.test(t)),'the player must be told what hit them');
+});
+
+test('reduced motion keeps the marks and drops the beam',()=>{
+  const r=signal(0,1,{reduced:true});
+  assert.deepEqual(r.beams,[]);
+  assert.ok(r.marked.some(([id,c])=>id==='opponent'&&c==='targeted'));
+});
+
+test('a mark clears itself instead of waiting for the next effect',()=>{
+  // 演出の列が空のまま印が残ると、受けた側の板が墨に反転したまま戻らない
+  const r=signal(1,0,{viewer:0});
+  assert.deepEqual(r.cleanup,[1100]);
+});

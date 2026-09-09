@@ -1,0 +1,25 @@
+# 配布物はビルドで作る。GitHub Pages は素のファイルをそのまま配る
+dist/
+
+# 作業中の置き場
+.openai/
+node_modules/
+.DS_Store
+
+# 使わなくなった意匠の試作（手元には残す）
+arena.css
+circle.css
+circuit.css
+circuit-frame.svg
+clarity.css
+clarity-game.css
+holdem.css
+immersive.css
+ink.css
+ink-art.png
+instrument.css
+luxury.css
+polish.css
+sprite.css
+style.css
+te.css

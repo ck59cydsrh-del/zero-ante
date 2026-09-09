@@ -1,0 +1,1219 @@
+/* ============================================================
+   ZERO//ANTE — ミニマルテクノの卓。
+   参照: Raster-Noton / Basic Channel / Chain Reaction の意匠。
+   sshhooggii(shogi-rogue/) と同じ系統で組む —
+   紙一色の地、墨と灰、差し色は一色だけ、極小の文字に広いトラッキング、
+   ヘアライン(塗らない・囲まない)、大きな余白、影とグローは無し、
+   角は直角、動きは linear / steps。
+   卓は緑の楕円をやめ、罫で三段に切った計器盤にした。
+   ============================================================ */
+:root{
+  --paper:#EDEDEA;
+  --card:#F7F7F5;
+  --ink:#0E0E10;
+  /* 灰は実測(対 #EDEDEA)。g70=7.31:1 / g45=4.68:1 本文可 /
+     g26=3.10:1 大きい文字のみ / g16以下は罫専用 */
+  --g70:rgba(14,14,16,.72);
+  --g45:rgba(14,14,16,.59);
+  --g26:rgba(14,14,16,.46);
+  --g16:rgba(14,14,16,.16);
+  --g09:rgba(14,14,16,.09);
+  /* 差し色は朱一色。面と文字で明度を分ける(sshhooggii の緑と同じ扱い)
+     面 #EF5828 は紙地で2.94:1 なので文字には使えない。その上の墨は5.60:1
+     文字 #C43A12 は紙地で4.52:1 で小さい文字にも使える */
+  --hot:#EF5828;
+  --hot-ink:#C43A12;
+  --hot-soft:rgba(239,88,40,.12);
+  /* 書体は IBM Plex。IBM の技術文書とコードのために Bold Monday が引いた面で、
+     計器盤・仕様書という卓の言い分とそのまま重なる。Mono はタイプライターの骨格を
+     残していて、Chain Reaction の袋（タイプライター組み）と同じ手触りになる。
+     Avenir や Futura のような幾何学系は丸く柔らかく、参照と方向が逆だった。
+     さらに Avenir は機種依存で、載っていない機では和文書体に落ちて
+     「ラテンの指定が消える」= 意匠が決まっていない状態だった。
+     Sans JP は和文とラテンが同じ設計なので、太さと濃度が揃う。 */
+  --sans:"IBM Plex Sans JP","IBM Plex Sans","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+  --mono:"IBM Plex Mono","SF Mono",SFMono-Regular,Menlo,monospace;
+  /* 能力の4系統に色を割り当てる。視認性優先で kozaki の許可済み。
+     面と文字で明度を分ける規約はそのまま（実測値は併記）。
+     info 面 #2563A8 は紙で5.22 なので**上は紙色**、他の3つは上が墨。 */
+  --c-info:#2563A8;      --c-info-on:var(--paper);  --c-info-ink:#16457A;  /* 文字 8.26:1 */
+  --c-attack:#EF5828;    --c-attack-on:var(--ink);  --c-attack-ink:#C43A12;/* 文字 4.52:1 */
+  --c-guard:#3FAE4A;     --c-guard-on:var(--ink);   --c-guard-ink:#146B12; /* 文字 5.70:1 */
+  --c-chaos:#F2C200;     --c-chaos-on:var(--ink);   --c-chaos-ink:#7A5E00; /* 文字 5.22:1 */
+  --hair:1px solid var(--g16);
+  --hair-strong:1px solid var(--g26);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+button,select,input{font:inherit;color:inherit;background:none;border:0;border-radius:0}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:disabled{cursor:default}
+/* 飛んでいくチップやビームは枠の外まで描くので、根の横スクロールは殺しておく */
+html{background:var(--paper);overflow:hidden}
+html,body{height:100%}
+body{
+  background:var(--paper);color:var(--ink);
+  font-family:var(--sans);font-weight:400;
+  /* palt = 和文の詰め（既定の全角ベタ組みは、この級数だと間延びする）
+     tnum = 数字の幅を揃える。チップは毎手カウントアップするので、
+     幅が動くと数字そのものが揺れて読めない */
+  font-feature-settings:"palt" 1,"tnum" 1;
+  min-height:100dvh;height:100dvh;overflow:hidden;overscroll-behavior:none;
+  -webkit-text-size-adjust:100%;
+}
+
+/* 極小のラベル。和文が混ざるものは詰めを浅くする。
+   .14em は欧文の大文字組みの作法で、和文に当てるとバラバラに見える。 */
+.eyebrow{letter-spacing:.12em}
+.eyebrow,.street-nav i,.meter i,.pot-box small,.stack-strip small,
+.seat-bank + small,.h-seat header span,footer,.action-feed b,#event-type,
+.trigger-mode,.pick-meta,.shop-price span,.backroom-owned small,.cat-cap,
+.decision small,.active-meta b,.scrap-control{
+  font-family:var(--mono);font-size:10px;letter-spacing:.06em;
+}
+/* 欧文だけのラベルは大文字＋広い詰め。ここが計器盤の声になる */
+.street-nav i,.pot-box small,.h-seat header span,.pick-index,#event-type,
+.trigger-mode b,.backroom-slots span,#draft-time,#round-time,#link-state,.room-state{
+  text-transform:uppercase;letter-spacing:.14em;
+}
+/* 欧文ラベルの中に和文の添え字が入るところは、そこだけ戻す */
+.street-nav em,#event-type,.trigger-mode b{letter-spacing:.06em;text-transform:none}
+
+/* ── 骨組み ─────────────────────────────────────────── */
+/* 卓ごと揺らす。steps で刻む——なめらかに揺れると安っぽくなる */
+@keyframes shakeSoft{0%,100%{transform:none}25%{transform:translate(2px,-1px)}50%{transform:translate(-2px,1px)}75%{transform:translate(1px,1px)}}
+@keyframes shakeHard{0%,100%{transform:none}12%{transform:translate(-5px,2px)}28%{transform:translate(5px,-3px)}44%{transform:translate(-4px,-2px)}62%{transform:translate(3px,3px)}80%{transform:translate(-2px,1px)}}
+.console[data-shake="soft"]{animation:shakeSoft .3s steps(4,end) 1}
+.console[data-shake="hard"]{animation:shakeHard .5s steps(6,end) 1}
+@media (prefers-reduced-motion:reduce){.console[data-shake]{animation:none}}
+
+.console{
+  height:100dvh;min-height:560px;display:grid;
+  grid-template-rows:52px minmax(0,1fr) 26px;
+  padding:0 28px;
+}
+.console>header{
+  display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:26px;
+  border-bottom:var(--hair-strong);
+}
+.logo{font:600 20px/1 var(--sans);letter-spacing:-.028em;color:var(--ink);text-decoration:none}
+.logo span{color:var(--hot-ink)}
+.street-nav{display:flex}
+.street-nav i{font-style:normal;color:var(--g45);padding:3px 10px 4px;border-left:var(--hair);display:grid;gap:1px;justify-items:center;line-height:1.1}
+.street-nav em{font-style:normal;font-family:var(--sans);font-size:10px;letter-spacing:0;opacity:.75}
+.street-nav i:last-child{border-right:var(--hair)}
+.street-nav i.on{background:var(--hot);color:var(--ink)}
+.header-tools{display:flex;align-items:center;justify-content:flex-end;gap:18px}
+.header-tools button{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--g45);padding:6px 0}
+.header-tools button[aria-pressed="true"]{color:var(--ink)}
+.meter{display:inline-flex;align-items:baseline;gap:7px}
+.meter i{font-style:normal;color:var(--g45)}
+.meter b{font:600 15px/1 var(--sans);letter-spacing:-.015em}
+.meter[data-met="true"] b{color:var(--hot-ink)}
+/* 連勝は数字で出す。倍率が乗っていることが見えないと、勝ち続ける意味が伝わらない */
+.meter.chain{padding:2px 8px 3px;background:var(--hot);animation:chainIn .3s steps(3,end) both}
+.meter.chain i{color:rgba(14,14,16,.7)}
+.meter.chain b{color:var(--ink)}
+@keyframes chainIn{0%{transform:scale(.6);opacity:0}100%{transform:none;opacity:1}}
+
+footer{
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  border-top:var(--hair);color:var(--g45);
+}
+footer button{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--g45)}
+footer #message{text-align:right}
+
+/* ── 卓: 罫で三段 ────────────────────────────────────── */
+.game{
+  position:relative;display:grid;min-height:0;
+  grid-template-columns:minmax(0,1fr) 210px;grid-template-rows:minmax(0,1fr) auto;
+  column-gap:24px;
+}
+
+/* ── 卓 ──────────────────────────────────────────────
+   緑のフェルトではなく、卓の平面図として描く。実在のトーナメント卓の
+   図面と同じで、外周のレール線と内側のベットラインの二重罫だけ。
+   手前は自分のレールで切り落とし、卓が自分の側へ続いて見えるようにする。
+   曲線は装飾ではなく卓そのものの形なので、ここだけ角丸を許す。 */
+.table-field{grid-column:1;grid-row:1;position:relative;overflow:hidden;min-height:240px}
+.rail{
+  position:absolute;left:0;right:0;top:10px;height:calc(100% + 150px);
+  border:1px solid var(--g26);border-radius:9999px;
+}
+.rail-line{position:absolute;inset:44px 74px;border:1px solid var(--g16);border-radius:9999px}
+/* 回戦が上がるほど卓が締まる。色は朱一色のまま、濃度と太さだけを段で動かす。
+   10段ぶんを列挙するのではなく、段を数値に変換して1本の式で出す。 */
+body[data-level] .rail{border-color:color-mix(in srgb,var(--hot) calc(var(--lv,0) * 11%),var(--g26))}
+body[data-level] .rail-line{border-color:color-mix(in srgb,var(--hot) calc(var(--lv,0) * 8%),var(--g16))}
+body[data-level="0"]{--lv:0} body[data-level="1"]{--lv:1} body[data-level="2"]{--lv:2}
+body[data-level="3"]{--lv:3} body[data-level="4"]{--lv:4} body[data-level="5"]{--lv:5}
+body[data-level="6"]{--lv:6} body[data-level="7"]{--lv:7} body[data-level="8"]{--lv:8}
+body[data-level="9"]{--lv:9}
+body[data-level="6"] .rail,body[data-level="7"] .rail,
+body[data-level="8"] .rail,body[data-level="9"] .rail{border-width:2px}
+.rail.hit{border-color:var(--hot)}
+.rail.hit-win{background:var(--hot);border-color:var(--hot)}
+
+/* 段1 — 相手の席 */
+.seats{position:absolute;inset:0}
+.h-seat{
+  position:absolute;left:var(--x);top:var(--y);transform:translate(-50%,-50%);
+  width:150px;padding:9px 11px 10px;background:var(--paper);border:var(--hair-strong);
+  display:grid;gap:4px;align-content:start;
+}
+.h-seat header{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.h-seat header b{font:600 13px/1.1 var(--sans);letter-spacing:-.015em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.h-seat header span{display:inline-flex;align-items:center;gap:4px;color:var(--g45)}
+.h-seat header span i{font-style:normal}
+/* ディーラーボタンは実物どおり丸。ここも装飾ではなく物の形 */
+.h-seat header span i.tok-d{
+  width:16px;height:16px;border-radius:50%;background:var(--ink);color:var(--paper);
+  display:inline-grid;place-items:center;font-size:9px;letter-spacing:0;
+}
+/* 出した額は席の手前に置く。実際の卓でベットが自分の前に出るのと同じ位置 */
+.seat-bet{
+  display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+  margin-top:2px;padding-top:5px;border-top:var(--hair);
+}
+.seat-bet i{font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--g45)}
+.seat-bet b{font:600 15px/1 var(--sans);letter-spacing:-.02em}
+.h-seat.acting .seat-bet b{color:var(--hot-ink)}
+.seat-bank strong{font:600 25px/1 var(--sans);letter-spacing:-.03em}
+.h-seat>small{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--g45)}
+.h-seat.acting{border-color:var(--ink);box-shadow:inset 0 -3px 0 var(--hot)}
+.h-seat.acting header b{color:var(--hot-ink)}
+.h-seat.folded{border-color:var(--g16);color:var(--g45)}
+.h-seat.folded header b{color:var(--g45);font-weight:400}
+.h-seat.folded .seat-bank strong{color:var(--g45);font-weight:400}
+.h-seat.folded .tiny-cards,.h-seat.folded .seat-mods{opacity:.5}
+.seat-mods{display:flex;flex-wrap:wrap;gap:3px}
+.seat-mods i{
+  font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.06em;
+  padding:2px 4px;border:var(--hair);color:var(--g70);
+}
+.tiny-cards{display:flex;gap:3px}
+.status-strip{display:flex;flex-wrap:wrap;gap:3px}
+.status-strip i{
+  font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+  padding:2px 4px;color:var(--ink);border:1px solid var(--ink);
+}
+.status-strip i span{display:none}
+.status-strip i.debuff{background:var(--ink);color:var(--paper)}
+
+/* 段2 — 場 */
+.holdem-center{
+  position:absolute;left:50%;top:66%;transform:translate(-50%,-50%);
+  display:grid;justify-items:center;gap:12px;
+}
+.side-rail{
+  grid-column:2;grid-row:1;display:grid;grid-template-rows:auto auto 1fr;gap:12px;
+  border-left:var(--hair);padding:14px 0 14px 16px;min-width:0;
+}
+.pot-box{display:grid;gap:3px;justify-items:center;text-align:center}
+.pot-box[data-heat="2"] strong{color:var(--hot-ink)}
+.pot-box[data-heat="3"] strong{color:var(--hot-ink)}
+.pot-box[data-heat="4"] strong{color:var(--ink);background:var(--hot);padding:2px 14px 6px}
+.pot-box[data-heat="4"]{animation:potHeat 1.6s steps(2,end) infinite}
+/* 山が動くほど場札の枠も締まる。中央が一番よく見られている場所なので、そこで語る */
+.table-field:has(.pot-box[data-heat="3"]) .board-cards .card{border-color:var(--g45)}
+.table-field:has(.pot-box[data-heat="4"]) .board-cards .card{border-color:var(--hot-ink)}
+.table-field:has(.pot-box[data-heat="4"]) .rail{border-color:var(--hot)}
+@keyframes potHeat{0%,100%{opacity:1}50%{opacity:.86}}
+.pot-box small{color:var(--g45)}
+.pot-box strong{font:600 clamp(34px,4vw,54px)/.86 var(--sans);letter-spacing:-.055em}
+.pot-box span{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--g45);white-space:nowrap}
+.board-cards{display:flex;gap:8px;align-items:center}
+
+/* 段3 — 自分 */
+.active-pod{
+  grid-column:1/-1;grid-row:2;display:grid;gap:8px;
+  padding:11px 0 13px;border-top:1px solid var(--ink);
+}
+.active-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto}
+#active-name{font:600 14px/1 var(--sans)}
+.active-meta b{color:var(--g45);margin-left:auto}
+.viewer-status{display:flex;gap:4px}
+.hole-wrap{display:flex;align-items:flex-end;gap:22px}
+.hand.hole{display:flex;gap:8px}
+.decision{display:grid;gap:3px}
+.decision small{color:var(--g45)}
+.decision b{font:600 22px/1 var(--sans);letter-spacing:-.028em}
+/* 役が一段上がったら、そこで一度だけ跳ねる */
+#hand-name.climb{animation:roleClimb .58s cubic-bezier(.15,1.7,.4,1) both}
+@keyframes roleClimb{
+  0%{transform:scale(1);color:var(--ink)}
+  18%{transform:scale(1.5) translateY(-3px);color:var(--hot-ink)}
+  55%{transform:scale(1);color:var(--hot-ink)}
+  100%{transform:scale(1);color:var(--ink)}
+}
+.decision span{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--g45)}
+.stack-strip{display:flex;gap:0;border-top:var(--hair);border-bottom:var(--hair)}
+.stack-strip>div{flex:0 0 auto;padding:8px 22px;border-left:var(--hair);display:grid;gap:2px}
+.stack-strip>div:first-child{padding-left:0;border-left:0}
+.stack-strip small{color:var(--g45)}
+.stack-strip strong,.stack-strip b{font:600 22px/1 var(--sans);letter-spacing:-.028em}
+
+.module-tray{display:flex;flex-wrap:wrap;gap:5px;align-items:center;min-height:24px}
+.rack-pips em{font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--g45);margin-right:2px}
+/* 系統がそろって効いているものと、あと1枚で届くもの */
+.syn-rack{display:inline-flex;gap:5px;flex-wrap:wrap;align-items:center;padding-right:10px;margin-right:6px;border-right:var(--hair)}
+.syn{
+  font-style:normal;display:inline-flex;align-items:baseline;gap:5px;
+  padding:2px 7px 3px;background:color-mix(in srgb,var(--c,var(--ink)) 16%,var(--paper));
+  border-left:3px solid var(--c,var(--ink));font-size:10px;
+}
+.syn b{font:600 11px/1 var(--sans);letter-spacing:-.015em}
+.syn.near{background:none;border-left-style:dashed;color:var(--g45)}
+.syn.near b{color:var(--g45);font-weight:400;font-family:var(--mono);font-size:10px;letter-spacing:.1em}
+.backroom-syn{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 0 0}
+.backroom-syn .syn-rack{border-right:0;padding-right:0;margin-right:0}
+.module-tray .empty,.live-readout{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--g45)}
+.mod-chip{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border:var(--hair);
+  font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--g70);
+}
+.mod-chip b{font-size:10px}
+.mod-chip span{color:var(--g45)}
+.mod-chip.ready{border-color:var(--ink);color:var(--ink)}
+.mod-chip.spent{opacity:.4}
+
+/* 操作 */
+.bet-controls{display:flex;gap:0;border:1px solid var(--ink)}
+.bet-controls>button{
+  flex:1 1 0;padding:15px 0;border-left:1px solid var(--ink);
+  font:600 14px/1 var(--sans);letter-spacing:.02em;
+  transition:background .09s linear,color .09s linear;
+}
+.bet-controls>button:first-child{border-left:0}
+.bet-controls>button:hover:not(:disabled){background:var(--ink);color:var(--paper)}
+#checkcall:not(:disabled){background:var(--ink);color:var(--paper)}
+#checkcall:not(:disabled):hover{background:var(--hot);color:var(--ink)}
+#allin:not(:disabled){color:var(--hot-ink)}
+#allin:not(:disabled):hover{background:var(--hot);color:var(--ink)}
+.bet-controls button:disabled{color:var(--g26)}
+.raise-control{
+  flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:12px;
+  border-left:1px solid var(--ink);padding:0 10px;
+}
+.raise-control small{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--g45)}
+.raise-control button{font-size:16px;width:26px;height:26px;border:var(--hair-strong);line-height:1}
+.raise-control button:disabled{color:var(--g16);border-color:var(--g09)}
+.raise-control b{font:600 20px/1 var(--sans);letter-spacing:-.028em;min-width:56px;text-align:center}
+
+/* ── カード: 紙に罫、朱は♥♦のみ ───────────────────────── */
+.card{
+  position:relative;display:inline-grid;place-items:center;
+  width:58px;height:82px;background:var(--card);border:1px solid var(--ink);
+  color:var(--ink);flex:none;
+}
+.card .corner{position:absolute;display:grid;justify-items:center;line-height:1;font-size:11px}
+.card .corner.top{top:5px;left:5px}
+.card .corner.bottom{bottom:5px;right:5px;transform:rotate(180deg)}
+.card .corner b{font:600 13px/1 var(--sans);letter-spacing:-.02em}
+/* 柄はドット絵。整数の格子で描いてあるので、拡大しても角が崩れない */
+.card .suit{display:block;fill:currentColor;shape-rendering:crispEdges}
+.card .corner .suit{width:7px;height:7px;margin-top:1px}
+.card .pip{display:grid;place-items:center;width:62%;height:50%}
+.card .pip .suit{width:100%;height:100%}
+.card.hot{color:var(--hot-ink)}
+.card-back{background:var(--paper);border:1px solid var(--g26)}
+.card-slot{background:none;border:1px dashed var(--g26)}
+.card-back span{
+  position:absolute;inset:5px;
+  background:repeating-linear-gradient(45deg,var(--g16) 0 1px,transparent 1px 5px);
+}
+.board-cards .card{width:64px;height:90px}
+.tiny-cards .card{width:24px;height:34px}
+.tiny-cards .card .pip{font-size:11px}
+.tiny-cards .card .corner{font-size:8px}
+.tiny-cards .card .corner b{font-size:8px}
+.tiny-cards .card .corner.bottom{display:none}
+
+/* ── 進行の記録 ─────────────────────────────────────── */
+.turn-banner{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:0}
+.turn-banner #table-msg{font-style:normal;padding:0}
+.turn-banner strong{font:600 15px/1.2 var(--sans);letter-spacing:-.02em}
+.turn-banner span{font-size:12px;color:var(--g45);line-height:1.5}
+.turn-banner[data-your="true"] strong{color:var(--hot-ink)}
+#table-msg{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--g45);padding-top:8px}
+/* ── 相手の能力表。席の小さな記号だけでは何を持っているか読めない ───── */
+.scout{display:grid;gap:5px;align-content:start;min-width:0}
+.scout>b{
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--g45);font-weight:400;
+  display:flex;gap:6px;align-items:baseline;
+}
+.scout>b i{font-style:normal;color:var(--ink)}
+#scout-list{display:grid;gap:3px}
+.scout-row{display:grid;grid-template-columns:52px auto 1fr;gap:7px;align-items:start;padding:2px 0}
+.scout-syn{display:flex;gap:3px;flex-wrap:wrap}
+.scout-syn i{
+  font-style:normal;font:600 10px/1.3 var(--sans);padding:1px 5px 2px;
+  background:var(--c,var(--ink));color:var(--c-on,var(--paper));
+}
+.scout-row>b{font:600 11px/1.35 var(--sans);letter-spacing:-.015em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scout-row.acting>b{color:var(--hot-ink)}
+.scout-row.acting{background:var(--hot-soft);margin:0 -6px;padding:2px 6px}
+.scout-row.folded{opacity:.42}
+.scout-row span{display:flex;flex-wrap:wrap;gap:3px;min-width:0}
+.scout-row i{
+  font-style:normal;font-size:10px;line-height:1.3;padding:1px 5px 2px;
+  border-left:2px solid var(--c,var(--g45));
+  background:color-mix(in srgb,var(--c,var(--ink)) 11%,var(--paper));
+}
+.scout-row i[data-use]{box-shadow:inset 0 -2px 0 var(--c,var(--g45))}
+.scout-row .none{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--g26)}
+
+/* 帯に降りたときは一行で。名前と能力を横に流す */
+.scout.in-band{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-height:20px}
+.scout.in-band #scout-list{display:flex;gap:10px;flex-wrap:wrap}
+.scout.in-band .scout-row{display:flex;align-items:baseline;gap:5px;padding:0}
+.scout.in-band .scout-syn i{font-size:9px}
+.scout.in-band .scout-row.acting{margin:0;padding:0 4px}
+.scout.in-band .scout-row>b{font-size:10px}
+.scout.in-band .scout-row i{font-size:10px}
+
+.action-feed{display:grid;gap:5px;align-content:start;pointer-events:none;min-width:0}
+.action-feed b{color:var(--g45);font-weight:400}
+#action-log{display:grid;gap:2px}
+#action-log span{
+  font-family:var(--mono);font-size:10px;letter-spacing:.02em;color:var(--g45);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+#action-log span:first-child{color:var(--ink)}
+.effect-receipt{
+  align-self:end;padding:8px 10px;border:var(--hair-strong);
+  font-size:11px;line-height:1.45;min-width:0;
+}
+.effect-receipt:empty{display:none}
+.effect-receipt header{display:flex;justify-content:space-between;gap:8px;margin-bottom:4px}
+.effect-receipt em{font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--g45)}
+.effect-receipt b{font-size:10px;font-weight:400;color:var(--g45)}
+.effect-receipt strong{display:block;font:600 13px/1.2 var(--sans)}
+.effect-receipt span{color:var(--g45)}
+
+/* ── 告知 ───────────────────────────────────────────── */
+/* 告知は卓を横切る帯。場札を隠さない位置に置く。
+   sshhooggii の「盤を横切る反転した帯」と同じ考え方。 */
+.event-fx{
+  position:absolute;left:10px;right:10px;bottom:6px;
+  padding:9px 14px 10px;background:var(--paper);border:2px solid var(--ink);
+  display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;z-index:40;
+}
+.event-fx #event-copy{flex:1 1 200px;min-width:0}
+/* 勝ちと負けだけは卓の真ん中で殴る */
+.event-fx.win,.event-fx.defeat{
+  left:50%;right:auto;bottom:auto;top:46%;transform:translate(-50%,-50%);
+  min-width:320px;padding:20px 26px;display:grid;gap:5px;
+}
+.event-fx.hidden{display:none}
+.event-fx.out{opacity:0;transition:opacity .18s linear}
+#event-type{color:var(--g45)}
+.event-fx strong{font:600 21px/1 var(--sans);letter-spacing:-.032em}
+.event-fx.win strong,.event-fx.defeat strong{font-size:34px;letter-spacing:-.045em}
+.event-fx span{font-size:12px;color:var(--g45);line-height:1.5}
+.event-fx.win{background:var(--hot)}
+.event-fx.win #event-type,.event-fx.win span{color:rgba(14,14,16,.7)}
+.event-fx.defeat{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.event-fx.defeat #event-type,.event-fx.defeat span{color:rgba(237,237,234,.66)}
+.event-route{display:flex;gap:8px;font-family:var(--mono);font-size:10px;letter-spacing:.1em}
+.event-route i{font-style:normal;color:var(--g26)}
+/* 誰が何をしたかは席の板が語る。中央の札は差額の内訳だけを、ポットを避けた位置で */
+/* 誰が何をしたかの札。場札の上には絶対に置かない——卓の下端に逃がす */
+.action-pop{
+  position:absolute;left:50%;bottom:6px;transform:translateX(-50%);
+  padding:7px 14px 8px;border:2px solid var(--ink);background:var(--paper);z-index:35;
+  display:flex;align-items:baseline;gap:10px;opacity:0;transition:opacity .12s linear;
+}
+.action-pop.show{opacity:1}
+.action-pop.hidden{display:none}
+.action-pop small{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--g45)}
+.action-pop strong{font:600 15px/1 var(--sans);letter-spacing:-.02em}
+.action-pop span{font-family:var(--mono);font-size:10px;color:var(--g45)}
+
+/* ── 画面(モーダル) ─────────────────────────────────── */
+.modal{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(880px,94%);max-height:88%;overflow:auto;
+  background:var(--paper);border:1px solid var(--ink);padding:30px 34px 26px;z-index:60;
+}
+.modal.hidden{display:none}
+.eyebrow{display:block;color:var(--g45);margin-bottom:10px}
+.modal h1,.modal h2{font-weight:600;letter-spacing:-.04em;line-height:1}
+.modal h2{font-size:34px;letter-spacing:-.035em;margin-bottom:10px}
+.modal>p{font-size:13px;line-height:1.65;color:var(--g70);max-width:62ch}
+.modal>button{
+  display:block;width:100%;margin-top:22px;padding:16px 0;
+  border:1px solid var(--ink);background:var(--ink);color:var(--paper);
+  font:600 14px/1 var(--sans);letter-spacing:.04em;
+  transition:background .09s linear,color .09s linear;
+}
+.modal>button:hover{background:var(--hot);color:var(--ink);border-color:var(--hot)}
+.modal>button kbd{font-family:var(--mono);font-size:10px;opacity:.6;margin-left:6px}
+.modal>button:disabled{background:none;color:var(--g26);border-color:var(--g16)}
+
+/* 開始 */
+.setup h1{font-size:74px;letter-spacing:-.055em;margin-bottom:4px}
+.title-caption{
+  display:block;font-family:var(--mono);font-size:10px;letter-spacing:.24em;
+  color:var(--g45);margin-top:12px;
+}
+/* ── ローカル通信の合図。中継を置かないので、手渡しの手順が画面に要る ── */
+.link-panel{display:grid;gap:12px;padding:14px 0;border-top:var(--hair)}
+.link-word{display:grid;gap:10px}
+.link-word label{display:grid;gap:5px}
+.link-word label span{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--g45)}
+#room-code{
+  border:var(--hair-strong);background:var(--card);padding:10px 12px;
+  font:600 18px/1 var(--sans);letter-spacing:.04em;width:min(280px,100%);
+}
+#room-code:focus{outline:0;border-color:var(--ink);box-shadow:inset 0 -2px 0 var(--hot)}
+.room-state{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--hot-ink)}
+.link-fallback summary{
+  font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--g45);
+  cursor:pointer;padding:6px 0;border-top:var(--hair);
+}
+.link-fallback summary:hover{color:var(--ink)}
+.link-fallback[open] summary{margin-bottom:10px}
+.link-panel.hidden{display:none}
+.link-roles{display:flex;gap:10px;flex-wrap:wrap}
+.link-roles button{
+  padding:9px 14px;border:1px solid var(--ink);
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+}
+.link-roles button:hover{background:var(--ink);color:var(--paper)}
+.link-step{display:grid;gap:9px}
+.link-step.hidden{display:none}
+.link-step p{font-size:12px;line-height:1.6;color:var(--g70)}
+.link-step label{display:grid;gap:4px}
+.link-step span{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--g45)}
+.link-step textarea{
+  width:100%;padding:8px 10px;border:var(--hair-strong);background:var(--card);
+  font-family:var(--mono);font-size:10px;line-height:1.4;resize:vertical;word-break:break-all;
+}
+.link-tools{display:flex;align-items:center;gap:12px}
+.link-tools button{padding:6px 12px;border:var(--hair-strong);font-family:var(--mono);font-size:10px;letter-spacing:.12em}
+.link-tools button:hover{background:var(--ink);color:var(--paper)}
+#link-state{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--hot-ink)}
+#link-apply{padding:9px 14px;border:1px solid var(--ink);font-family:var(--mono);font-size:10px;letter-spacing:.14em;justify-self:start}
+#link-apply:hover{background:var(--ink);color:var(--paper)}
+#start:disabled{opacity:.35}
+
+/* ── 最終順位。決着の板でいちばん見たいのは「自分は何番目だったか」 ── */
+.standings{list-style:none;display:grid;gap:0;margin:16px 0 20px;width:100%}
+@keyframes standRow{0%{opacity:0;transform:translateY(7px)}100%{opacity:1;transform:none}}
+.standings li{animation:standRow .34s steps(4,end) calc(var(--r,0) * 90ms) both}
+.standings li{
+  display:grid;grid-template-columns:30px 1fr auto auto;gap:12px;align-items:baseline;
+  padding:8px 0;border-top:var(--hair);
+}
+.standings li:last-child{border-bottom:var(--hair)}
+.standings b{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--g45);font-weight:400}
+.standings span{font:600 14px/1.2 var(--sans);letter-spacing:-.015em}
+.standings i{font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--g45)}
+.standings strong{font:600 18px/1 var(--sans);letter-spacing:-.022em;text-align:right;min-width:74px}
+.standings li.top{background:var(--hot);margin:0 -12px;padding:8px 12px}
+.standings li.top b,.standings li.top i{color:rgba(14,14,16,.7)}
+.standings li.bust{opacity:.4}
+.standings li.bust strong::after{content:" 脱落";font-family:var(--mono);font-size:10px;letter-spacing:.1em}
+
+.setup-grid{display:flex;flex-wrap:wrap;gap:22px;margin:26px 0 20px}
+.setup-grid label{display:grid;gap:6px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--g45)}
+.setup-grid label.hidden{display:none}
+.setup-grid select{border:var(--hair-strong);padding:9px 10px;font-size:13px;font-family:var(--sans)}
+.local-names{display:flex;flex-wrap:wrap;gap:10px;width:100%}
+.local-names.hidden{display:none}
+.local-names label{gap:4px}
+.local-names input{border:var(--hair-strong);padding:7px 8px;font-size:12px;width:130px}
+.spec-list{display:grid;gap:0;margin:22px 0 0}
+.spec-list div{display:flex;justify-content:space-between;gap:20px;padding:9px 0;border-top:var(--hair)}
+.spec-list div:last-child{border-bottom:var(--hair)}
+.spec-list span{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--g45)}
+.spec-list b{font-weight:600;font-size:13px}
+
+/* 結果 */
+.round-players{display:grid;gap:0;margin-top:16px}
+.round-players article{display:grid;grid-template-columns:1fr auto auto;gap:16px;align-items:center;padding:10px 0;border-top:var(--hair)}
+.round-players article:last-child{border-bottom:var(--hair)}
+.round-players header{display:flex;gap:10px;align-items:baseline}
+.round-players header b{font-weight:600;font-size:13px}
+.round-players header strong{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--g45)}
+/* 何の役で決まったのかは、勝ち負けの札の隣に置く */
+.round-players header em{font-style:normal;font:600 12px/1 var(--sans);letter-spacing:-.015em;color:var(--g70)}
+.round-players .round-winner header em{color:var(--ink)}
+.round-players .round-winner header strong{color:var(--hot-ink)}
+.round-players .round-winner header b{color:var(--hot-ink)}
+.result-hand,.result-board>div{display:flex;gap:4px}
+.result-hand .card{width:26px;height:37px}
+.result-hand .card .pip{font-size:12px}
+.result-hand .card .corner{font-size:8px}
+.result-hand .card .corner b{font-size:8px}
+.result-hand .card .corner.bottom{display:none}
+.result-board{margin-top:14px;display:grid;gap:6px}
+.result-board small{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--g45)}
+.result-board .card{width:34px;height:48px}
+.result-board .card .pip{font-size:15px}
+.result-board .card .corner.bottom{display:none}
+.result-numbers{display:grid;justify-items:end;gap:1px}
+.result-numbers>b{font:600 20px/1 var(--sans);letter-spacing:-.028em}
+.result-numbers small{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--g45)}
+
+/* 能力カード(ドラフトと BACK ROOM) */
+.chaos-head{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;padding-bottom:16px;border-bottom:var(--hair-strong)}
+.chaos-head h2{font-size:30px}
+.chaos-head>b{font:600 40px/1 var(--sans);letter-spacing:-.05em;text-align:right}
+.chaos-head>b small{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--g45);margin-bottom:4px}
+.chaos-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:var(--hair)}
+.chaos-cards button{
+  text-align:left;padding:16px 16px 14px;border-left:var(--hair);
+  display:grid;gap:7px;align-content:start;
+  transition:background .09s linear;
+}
+.chaos-cards button:first-child{border-left:0}
+.chaos-cards button:hover:not(:disabled){background:var(--hot-soft)}
+.chaos-cards button:disabled{opacity:.42}
+.chaos-cards button.sold{opacity:.42}
+.chaos-cards button.selected{background:var(--hot)}
+.chaos-cards button.rejected{opacity:.25}
+.pick-index{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--g45)}
+.pick-meta{display:flex;gap:8px;color:var(--g45)}
+.pick-meta strong{font-weight:400;color:var(--ink)}
+.chaos-cards button[data-tier="3"] .pick-meta strong{color:var(--hot-ink)}
+.chaos-cards button>i{font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--g45)}
+.chaos-cards h3{font:600 19px/1.15 var(--sans);letter-spacing:-.028em}
+.chaos-cards .code-name{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--g45);margin-top:-2px}
+.chaos-cards p{font-size:12px;line-height:1.6;color:var(--g70)}
+.trigger-mode{display:flex;gap:6px;color:var(--g45)}
+.trigger-mode b{color:var(--ink);font-weight:400}
+.shop-price{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:4px;padding-top:9px;border-top:var(--hair);font-style:normal}
+.shop-price span{color:var(--g45)}
+.shop-price b{font:600 24px/1 var(--sans);letter-spacing:-.03em}
+.shop-price b::after{content:"枚";font-size:11px;font-weight:400;margin-left:2px;color:var(--g45)}
+.shop-empty{grid-column:1/-1;padding:26px 0;color:var(--g45);font-size:12px}
+
+/* BACK ROOM の器具 */
+.backroom-slots{display:flex;align-items:center;gap:6px;padding:10px 0;flex-wrap:wrap}
+.backroom-slots i{width:13px;height:13px;border:1px solid var(--ink);flex:none}
+.backroom-slots i.empty{border-color:var(--g26)}
+.backroom-slots i.filled{background:var(--ink)}
+.backroom-slots i.filled.info,.backroom-slots i.filled.guard{background:var(--g45)}
+.backroom-slots span{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--g45);margin-left:6px}
+.backroom-slots .cat-cap{margin-left:14px}
+.backroom-slots .cat-cap.maxed{color:var(--hot-ink)}
+.backroom-tools{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:14px 0 0;border-top:var(--hair)}
+#skip-reward{
+  padding:9px 14px;border:1px solid var(--g16);color:var(--g45);
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+}
+#skip-reward:hover:not(:disabled){border-color:var(--ink);color:var(--ink)}
+#skip-reward:disabled{color:var(--g16);border-color:var(--g09)}
+.draft-actions{display:flex;gap:10px;flex-wrap:wrap}
+#backroom-reroll,#reroll-reward{
+  padding:9px 14px;border:1px solid var(--ink);
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+}
+#backroom-reroll:hover:not(:disabled),#reroll-reward:hover:not(:disabled){background:var(--ink);color:var(--paper)}
+#backroom-reroll:disabled,#reroll-reward:disabled{border-color:var(--g16);color:var(--g26)}
+.scrap-control{display:flex;align-items:center;gap:9px;color:var(--g45)}
+.scrap-control b{font-family:var(--sans);font-size:15px;font-weight:600;letter-spacing:-.015em;color:var(--ink)}
+.scrap-control button{width:26px;height:26px;border:var(--hair-strong);font-size:15px;line-height:1}
+.scrap-control button:hover:not(:disabled){background:var(--ink);color:var(--paper)}
+.scrap-control button:disabled{color:var(--g16);border-color:var(--g09)}
+.scrap-control em{font-style:normal;text-transform:none;letter-spacing:0;font-family:var(--sans);font-size:11px}
+.backroom-owned{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:14px 0 0;margin-top:14px;border-top:var(--hair)}
+.backroom-owned small{flex:1 0 100%;color:var(--g45);margin-bottom:3px}
+.owned-chip{
+  display:inline-flex;align-items:center;gap:7px;padding:5px 9px;border:var(--hair-strong);
+  font-family:var(--mono);font-size:10px;letter-spacing:.05em;
+}
+.owned-chip:hover{background:var(--ink);color:var(--paper)}
+.owned-chip span{color:var(--g45)}
+.owned-chip:hover span{color:rgba(237,237,234,.66)}
+.owned-chip.swap{border-color:var(--hot);color:var(--hot-ink)}
+.owned-chip.swap span{color:var(--hot-ink)}
+.owned-chip.cancel{border-style:dashed;color:var(--g45)}
+
+/* 対象選択・受け渡し */
+.target-options{display:grid;gap:0;margin-top:14px}
+.target-options button{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-top:var(--hair);text-align:left;font-size:13px}
+.target-options button:last-child{border-bottom:var(--hair)}
+.target-options button:hover{background:var(--hot-soft)}
+#cancel-target{background:none;color:var(--g45);border-color:var(--g16)}
+#cancel-target:hover{background:none;color:var(--ink);border-color:var(--ink)}
+
+/* 飛沫は使わない。段の入れ替わりだけ linear で */
+#chip-flight,#burst{position:absolute;inset:0;pointer-events:none;z-index:50;overflow:visible}
+
+dialog#manual{
+  border:1px solid var(--ink);background:var(--paper);color:var(--ink);
+  width:min(720px,92%);padding:30px 34px;
+}
+dialog#manual::backdrop{background:rgba(14,14,16,.5)}
+dialog#manual .close{position:absolute;top:14px;right:16px;font-size:18px;color:var(--g45)}
+dialog#manual h2{font:600 26px/1 var(--sans);letter-spacing:-.03em;margin:8px 0 16px}
+.manual-grid{display:grid;gap:0;margin-bottom:16px}
+.manual-grid p{display:grid;grid-template-columns:104px 1fr;gap:14px;padding:9px 0;border-top:var(--hair);font-size:12px;line-height:1.6;color:var(--g70)}
+.manual-grid em{font-style:normal;background:var(--hot-soft);box-shadow:inset 0 -1px 0 var(--hot-ink)}
+.manual-grid>p>b:first-child{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--ink)}
+dialog#manual>p{font-size:12px;line-height:1.7;color:var(--g70)}
+dialog#manual small{display:block;margin-top:12px;font-size:11px;color:var(--g45)}
+
+/* 横に狭い機。段は保ったまま級数だけ落とす */
+@media (max-width:1180px){
+  .console{padding:0 18px}
+  .side-rail{display:none}
+  .game{grid-template-columns:minmax(0,1fr)}
+  .h-seat{width:132px}
+  .pot-box strong{font-size:44px}
+  .board-cards .card{width:54px;height:76px}
+}
+@media (max-width:1000px){
+  .h-seat{width:118px;padding:6px 8px 7px}
+  .rail-line{inset:34px 52px}
+}
+@media (max-width:820px){
+  .console{grid-template-rows:46px minmax(0,1fr) 22px}
+  .h-seat{width:116px;padding:6px 8px 7px}
+  .h-seat header b{font-size:12px}
+  .chaos-cards{grid-template-columns:1fr;border-top:0}
+  .chaos-cards button{border-left:0;border-top:var(--hair)}
+  .card{width:46px;height:66px}
+  .board-cards .card{width:46px;height:66px}
+  .modal{padding:22px 20px}
+  .setup h1{font-size:52px}
+  .modal h2{font-size:26px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+
+/* ── 効いた場所の反転。曲線もフェードも使わない ─────────── */
+/* 通常の打点は罫だけ動く。面が朱に染まるのは勝ちの瞬間だけ */
+/* 通常の打点はレールの罫だけ動く。卓の面が朱に染まるのは勝ちの瞬間だけ */
+.rail.hit ~ .holdem-center #pot{color:var(--hot-ink)}
+.rail.hit-win ~ .holdem-center .pot-box small,
+.rail.hit-win ~ .holdem-center .pot-box span{color:rgba(14,14,16,.7)}
+.h-seat.targeted,.active-pod.targeted{box-shadow:inset 0 0 0 1px var(--ink)}
+.h-seat.debuff-hit,.active-pod.debuff-hit{background:var(--ink);color:var(--paper)}
+.h-seat.debuff-hit .h-seat header span,.h-seat.debuff-hit>small{color:rgba(237,237,234,.66)}
+.h-seat.buff-hit,.active-pod.buff-hit{background:var(--hot-soft)}
+.h-seat.casting,.active-pod.casting{box-shadow:inset 3px 0 0 var(--hot-ink)}
+#board.board-hit .card{border-color:var(--hot-ink)}
+.mod-chip.fired{background:var(--ink);color:var(--paper)}
+
+/* 縦が足りない機。段は崩さず、級数と余白だけ落とす */
+@media (max-height:780px){
+  .h-seat{gap:2px;padding:7px 9px 8px}
+  .h-seat .tiny-cards{display:none}
+  .seat-bank strong{font-size:19px}
+  /* 縦が足りない機では、ポットを場札の横に置いて中央の塊を半分の高さにする */
+  .holdem-center{grid-auto-flow:column;align-items:center;gap:20px;top:60%}
+  .action-pop{bottom:6px}
+  .pot-box{justify-items:start;text-align:left}
+    .rail{top:6px;height:calc(100% + 120px)}
+  .rail-line{inset:32px 58px}
+    .tiny-cards .card{width:20px;height:28px}
+  .pot-box strong{font-size:42px}
+  .board-cards .card{width:52px;height:73px}
+  .active-pod{gap:9px;padding:11px 0 12px}
+  .card{width:50px;height:70px}
+  .bet-controls>button{padding:12px 0}
+  .stack-strip>div{padding:6px 18px}
+  .stack-strip strong,.stack-strip b{font-size:19px}
+}
+@media (max-height:640px){
+  .console{grid-template-rows:44px minmax(0,1fr) 20px}
+  .h-seat{gap:3px;padding:6px 8px 7px}
+  .seat-bank strong{font-size:18px}
+  .rail{top:4px;height:calc(100% + 92px)}
+  .rail-line{inset:24px 44px}
+    .h-seat .tiny-cards{display:none}
+  .pot-box strong{font-size:34px}
+  .board-cards .card{width:44px;height:62px}
+  .card{width:44px;height:62px}
+  .active-pod{gap:7px;padding:8px 0 9px}
+  .turn-banner{padding-top:6px}
+  .bet-controls>button{padding:10px 0;font-size:13px}
+  .module-tray{min-height:0}
+}
+
+/* ボスの席。名前と枠だけ強くする（新しい色は足さない） */
+.h-seat.boss{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.h-seat.boss header b{font-weight:600;letter-spacing:.02em}
+.h-seat.boss header::after{
+  content:"BOSS";font-family:var(--mono);font-size:9px;letter-spacing:.14em;
+  background:var(--ink);color:var(--paper);padding:1px 4px;
+}
+
+/* ============================================================
+   報酬の演出。普段は罫だけが動き、ここでだけ大きさと色が出る。
+   静けさが打点を立たせる、という sshhooggii と同じ作り。
+   ============================================================ */
+#burst{overflow:visible}
+.pop{
+  position:absolute;left:var(--x);top:var(--y);transform:translate(-50%,-50%);
+  font:600 18px/1 var(--sans);letter-spacing:-.022em;white-space:nowrap;
+  background:var(--paper);color:var(--ink);border:2px solid var(--ink);
+  padding:.14em .38em .2em;
+  animation:pop 1.25s linear forwards;
+}
+.pop.big{font-size:min(26px,3.2vw);background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.pop.huge{
+  font-size:min(38px,4.4vw);letter-spacing:-.04em;
+  background:var(--hot);color:var(--ink);border-color:var(--ink);
+  animation:popHuge 1.5s linear forwards;
+}
+.pop.guard{background:var(--c-guard);color:var(--c-guard-on);border-color:var(--ink)}
+@keyframes pop{
+  0%{opacity:0;transform:translate(-50%,-40%)}
+  10%{opacity:1;transform:translate(-50%,-62%)}
+  76%{opacity:1;transform:translate(-50%,-92%)}
+  100%{opacity:0;transform:translate(-50%,-124%)}
+}
+@keyframes popHuge{
+  0%{opacity:0;transform:translate(-50%,-40%) scale(.6)}
+  9%{opacity:1;transform:translate(-50%,-60%) scale(1.16)}
+  17%{transform:translate(-50%,-62%) scale(1)}
+  84%{opacity:1;transform:translate(-50%,-78%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-96%) scale(1)}
+}
+
+/* 卓の中央に殴りつける一語 */
+/* 中央の一語。場札の上には置かない——いちばん見たい5枚を隠してしまう */
+.stamp{
+  position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);
+  font:600 min(46px,5.4vw)/1 var(--sans);letter-spacing:-.05em;
+  background:var(--ink);color:var(--paper);padding:.12em .3em .18em;
+  white-space:nowrap;max-width:94%;
+  animation:stampIn 1.5s cubic-bezier(.15,1.7,.4,1) forwards;
+}
+.stamp.big{font-size:min(62px,7vw);letter-spacing:-.055em}
+.stamp.huge{
+  font-size:min(78px,8.6vw);letter-spacing:-.058em;background:var(--hot);color:var(--ink);
+  padding:.08em .26em .14em;
+}
+/* 守りが立った一語だけは系統の緑で。攻めと守りが同じ色だと、どちらが起きたか読めない */
+.stamp.guard{background:var(--c-guard);color:var(--c-guard-on)}
+.stamp.sub{top:60%;font:600 18px/1 var(--mono);letter-spacing:.24em;background:var(--paper);color:var(--g45);border:1px solid var(--g26);padding:.3em .6em;animation:stampSub 1.3s linear forwards}
+@keyframes stampIn{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(2.3)}
+  11%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  84%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-60%) scale(1.04)}
+}
+@keyframes stampSub{0%{opacity:0}18%{opacity:1}72%{opacity:1}100%{opacity:0}}
+
+/* 数え上げ中の桁 */
+#pot.counting,#viewer-chips.counting{color:var(--hot-ink)}
+
+/* 連勝の段。数字を見ていなくても卓の縁で分かる */
+body[data-chain="2"] .rail{border-color:var(--g45)}
+body[data-chain="3"] .rail{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+body[data-chain="3"] .rail-line{border-color:var(--hot)}
+
+/* ランの形。8階のどこに居るかを常時出す */
+.floor-track{display:flex;align-items:center;gap:3px;margin-right:4px}
+.floor-track i{width:9px;height:9px;border:1px solid var(--g45);flex:none}
+.floor-track i.done{background:var(--ink);border-color:var(--ink)}
+.floor-track i.now{background:var(--hot);border-color:var(--hot);width:14px}
+.floor-track i.boss{transform:rotate(45deg)}
+.gauge{position:relative;padding-bottom:6px}
+.gauge-bar{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--g16)}
+.gauge-bar i{display:block;height:100%;width:var(--fill,0%);background:var(--ink);transition:width .28s linear}
+.gauge[data-met="true"] .gauge-bar i{background:var(--hot)}
+
+/* 場札は配られた瞬間に一度だけ刻まれる */
+.board-cards .card{animation:dealIn .26s steps(3,end) both}
+@keyframes dealIn{0%{opacity:0;transform:translateY(-10px)}100%{opacity:1;transform:none}}
+.board-cards .card-slot{animation:none}
+
+/* 取り付けたスロットは一度点滅する */
+.backroom-slots i.filled.fresh{animation:slotIn .34s steps(2,end) 2}
+@keyframes slotIn{50%{background:var(--hot)}}
+
+@media (prefers-reduced-motion:reduce){
+  .pop,.stamp,.board-cards .card,.backroom-slots i.filled.fresh{animation:none!important}
+  .gauge-bar i{transition:none}
+}
+
+/* 手札の帯に出す能力ラック。ビルドが常に見えているのがローグライクの側 */
+.rack-pips{display:inline-flex;align-items:center;gap:3px;padding-right:10px;margin-right:6px;border-right:var(--hair)}
+.rack-pips i{width:9px;height:9px;border:1px solid var(--g45);flex:none}
+.rack-pips i.filled{background:var(--ink);border-color:var(--ink)}
+.rack-pips i.filled.info,.rack-pips i.filled.guard{background:var(--g45);border-color:var(--g45)}
+.rack-pips b{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--g45);font-weight:400;margin-left:4px}
+
+/* ── チップ。ドット絵の円盤が席からポットへ落ちる ───────── */
+#chip-flight i{position:absolute;left:var(--x);top:var(--y);pointer-events:none}
+.chip{
+  width:17px;height:17px;margin:-8px 0 0 -8px;
+  animation:chipFly .58s steps(6,end) var(--d,0ms) both;
+}
+/* 決着のチップ雨は落差が大きいので、長く・重く落とす */
+.chip.rain{width:21px;height:21px;animation:chipFly 1.05s steps(9,end) var(--d,0ms) both}
+.chip svg{display:block;width:100%;height:100%;fill:var(--tone,var(--ink));shape-rendering:crispEdges}
+/* 額の単位で色が変わる。実物のカジノと同じ約束 */
+.chip.chip-min{--tone:var(--g70)}
+.chip.chip-low{--tone:var(--c-info)}
+.chip.chip-mid{--tone:var(--c-attack)}
+.chip.chip-hi{--tone:var(--c-guard)}
+@keyframes chipFly{
+  0%{opacity:0;transform:translate(0,0)}
+  10%{opacity:1;transform:translate(0,-6px)}
+  100%{opacity:1;transform:translate(var(--dx),var(--dy)) scale(.55)}
+}
+/* CHECK は卓を叩く。チップは動かない */
+.table-tap{
+  width:22px;height:2px;margin:-1px 0 0 -11px;background:var(--ink);
+  animation:tap .34s steps(3,end) both;
+}
+@keyframes tap{0%{opacity:0;transform:scaleX(.2)}30%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1)}}
+
+/* 勝った席は一拍だけ反転する */
+.h-seat.won,.active-pod.won{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.h-seat.won header span,.h-seat.won>small,.h-seat.won .seat-bet i{color:rgba(237,237,234,.7)}
+.h-seat.won .seat-mods i,.h-seat.won .status-strip i{border-color:rgba(237,237,234,.5);color:var(--paper)}
+.active-pod.won .stack-strip small,.active-pod.won .decision small,.active-pod.won #table-msg,
+.active-pod.won .turn-banner span,.active-pod.won .decision span{color:rgba(237,237,234,.7)}
+.active-pod.won .card{color:var(--ink)}
+
+/* ============================================================
+   能力の4系統を色で区別する。どこでも同じ色・同じ位置に出す。
+   面には規約どおり地か墨を載せる（infoだけ紙色、他は墨）。
+   ============================================================ */
+.info{--c:var(--c-info);--c-on:var(--c-info-on);--c-ink:var(--c-info-ink)}
+.attack{--c:var(--c-attack);--c-on:var(--c-attack-on);--c-ink:var(--c-attack-ink)}
+.guard{--c:var(--c-guard);--c-on:var(--c-guard-on);--c-ink:var(--c-guard-ink)}
+.chaos{--c:var(--c-chaos);--c-on:var(--c-chaos-on);--c-ink:var(--c-chaos-ink)}
+.mod-info{--c:var(--c-info);--c-on:var(--c-info-on);--c-ink:var(--c-info-ink)}
+.mod-attack{--c:var(--c-attack);--c-on:var(--c-attack-on);--c-ink:var(--c-attack-ink)}
+.mod-guard{--c:var(--c-guard);--c-on:var(--c-guard-on);--c-ink:var(--c-guard-ink)}
+.mod-chaos{--c:var(--c-chaos);--c-on:var(--c-chaos-on);--c-ink:var(--c-chaos-ink)}
+
+/* 席に並ぶ能力の札 */
+.seat-mods i{background:var(--c,var(--paper));color:var(--c-on,var(--ink));border-color:var(--c,var(--g16))}
+/* 手札の帯のラック */
+.mod-chip{border-color:var(--c,var(--g16));color:var(--c-ink,var(--g70))}
+.mod-chip b{color:var(--c-ink,var(--ink))}
+.rack-pips i.filled{background:var(--c,var(--ink));border-color:var(--c,var(--ink))}
+.backroom-slots i.filled{background:var(--c,var(--ink))}
+/* 能力カード */
+.chaos-cards button .pick-meta b{background:var(--c);color:var(--c-on);padding:2px 6px}
+.owned-chip{border-color:var(--c,var(--g26))}
+.owned-chip b{color:var(--c-ink,var(--ink))}
+
+/* 自動か手動かを、どの画面でも同じ札で示す */
+.trigger-mode b,.mod-chip span,.auto-tag{
+  font-family:var(--mono);font-size:10px;letter-spacing:.1em;padding:2px 5px;
+  background:var(--ink);color:var(--paper);
+}
+.trigger-mode b.use,.mod-chip.manual span,.auto-tag.use{background:var(--c-attack);color:var(--c-attack-on)}
+.mod-chip.manual.ready{border-width:2px;animation:readyBlink .9s steps(2,end) infinite}
+.mod-chip.manual.ready span{background:var(--c-attack);color:var(--c-attack-on)}
+@keyframes readyBlink{50%{background:color-mix(in srgb,var(--c-attack) 16%,transparent)}}
+
+/* 発動の告知。誰が→誰に、何系統か、自動か手動かを一枚で出す */
+.event-fx[data-category]{border-width:2px;border-color:var(--c)}
+.event-fx[data-category] #event-type{background:var(--c);color:var(--c-on);padding:3px 8px;display:inline-block}
+.event-fx[data-category] strong{color:var(--c-ink)}
+.event-route{align-items:center;font-size:12px;letter-spacing:.04em}
+.event-route b{font-weight:600}
+.event-route i{color:var(--c-ink,var(--g45));font-size:14px}
+.effect-receipt{border-left:4px solid var(--c,var(--g26))}
+.effect-receipt em{background:var(--c);color:var(--c-on);padding:2px 5px}
+.effect-receipt strong{color:var(--c-ink,var(--ink))}
+
+/* 効いた席は系統の色で縁取る */
+.h-seat.casting,.active-pod.casting{box-shadow:inset 4px 0 0 var(--c-guard)}
+.h-seat.targeted,.active-pod.targeted{box-shadow:inset 0 0 0 2px var(--c-attack)}
+.h-seat.buff-hit{box-shadow:inset 0 0 0 2px var(--c-guard)}
+#board.board-hit .card{border-color:var(--c-chaos);border-width:2px}
+
+/* 席の状態の札も色で */
+.status-strip i.debuff{background:var(--c-attack);color:var(--c-attack-on);border-color:var(--c-attack)}
+.status-strip i.danger{background:var(--ink);color:var(--paper)}
+
+/* HPゲージ。卓のいちばん大きいスタックを満タンとして、誰が短いか一目で出す */
+.hp{display:block;height:3px;background:var(--g16);margin-top:4px}
+.hp i{display:block;height:100%;width:var(--w,100%);background:var(--ink);transition:width .3s linear}
+.h-seat.acting .hp i{background:var(--c-attack)}
+.h-seat.folded .hp i{background:var(--g45)}
+.stack-cell{min-width:112px}
+.stack-cell .hp{margin-top:5px}
+#viewer-hp{background:var(--c-guard)}
+/* 肩書きの横の小さい但し書き */
+#position{line-height:1.15}
+#position small{
+  display:block;font-family:var(--mono);font-size:9px;letter-spacing:.08em;
+  color:var(--g45);margin-top:3px;text-transform:none;
+}
+
+/* 自分の状態も席と同じ札で出す（説明文は札の中に畳む） */
+.viewer-status i{
+  font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+  padding:2px 5px;border:1px solid var(--ink);
+}
+.viewer-status i span{display:none}
+.viewer-status i.debuff{background:var(--c-attack);color:var(--c-attack-on);border-color:var(--c-attack)}
+.viewer-status i.danger{background:var(--ink);color:var(--paper)}
+
+/* チップが尽きた席は、その場で降りたように見せる */
+.h-seat.busted{border-color:var(--g16);color:var(--g45);opacity:.72}
+.h-seat.busted header b{color:var(--g45);font-weight:400}
+.h-seat.busted .seat-bank strong{color:var(--g45);font-weight:400}
+.h-seat.busted .hp i{background:var(--g16)}
+.h-seat.busted .seat-mods,.h-seat.busted .tiny-cards{display:none}
+.h-seat.busted>small{background:var(--ink);color:var(--paper);padding:1px 5px;justify-self:start}
+
+/* ── 持ち時間 ──────────────────────────────────────── */
+.act-timer{
+  position:relative;height:16px;border:var(--hair-strong);border-bottom:0;
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--g45);
+  display:flex;align-items:center;justify-content:flex-end;padding-right:8px;
+}
+.act-timer::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:var(--left,100%);
+  background:var(--ink);opacity:.14;
+}
+.act-timer[data-low="true"]{color:var(--c-attack-on);border-color:var(--c-attack)}
+.act-timer[data-low="true"]::before{background:var(--c-attack);opacity:1;animation:lowBlink .5s steps(2,end) infinite}
+@keyframes lowBlink{50%{opacity:.45}}
+.chaos-head>b[data-low="true"]{color:var(--c-attack-ink);animation:lowBlink .5s steps(2,end) infinite}
+
+/* ── ビーム。撃った先を線で結ぶ ────────────────────────── */
+.beam{
+  position:absolute;left:var(--x);top:var(--y);width:var(--len);height:5px;
+  transform-origin:0 50%;transform:translateY(-50%) rotate(var(--angle));
+  background:repeating-linear-gradient(90deg,var(--c,var(--ink)) 0 7px,transparent 7px 12px);
+  animation:beamShoot .34s steps(4,end) forwards;
+}
+@keyframes beamShoot{0%{clip-path:inset(0 100% 0 0)}60%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 0);opacity:0}}
+.beam-hit{
+  position:absolute;left:var(--x);top:var(--y);width:34px;height:34px;margin:-17px 0 0 -17px;
+  border:3px solid var(--c,var(--ink));animation:beamHit .42s steps(3,end) forwards;
+}
+@keyframes beamHit{0%{transform:scale(.2);opacity:1}70%{transform:scale(1.1);opacity:1}100%{transform:scale(1.3);opacity:0}}
+
+/* ── HPバーを主役に。数字はその下 ─────────────────────── */
+.seat-bank{display:grid;gap:4px}
+.seat-bank .hp{height:8px;margin:0;border:1px solid var(--ink)}
+.seat-bank .hp i{background:var(--ink)}
+.h-seat.acting .seat-bank .hp i{background:var(--c-attack)}
+.seat-bank strong{font-size:19px}
+.stack-cell .hp{height:8px;border:1px solid var(--ink);margin:0 0 5px}
+.stack-cell{display:grid;gap:2px}
+
+/* ── ショウダウン。席ごとに順番に開く ─────────────────── */
+.h-seat.showing .tiny-cards .card{
+  animation:flipIn .26s steps(3,end) both;
+  animation-delay:calc(var(--seat, 0) * .08s);
+}
+@keyframes flipIn{0%{opacity:0;transform:scaleX(.1)}60%{opacity:1;transform:scaleX(1.08)}100%{opacity:1;transform:none}}
+
+/* ── 破壊。飛んだ席は一拍で潰れる ────────────────────── */
+.h-seat.wiped{animation:wipe .74s steps(6,end) both;position:absolute}
+.h-seat.wiped::after{
+  content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(45deg,var(--ink) 0 3px,transparent 3px 9px);
+  animation:wipeMask .74s steps(6,end) both;
+}
+@keyframes wipe{
+  0%{background:var(--ink);color:var(--paper)}
+  22%{transform:translate(-50%,-50%) translateX(4px)}
+  44%{transform:translate(-50%,-50%) translateX(-4px)}
+  70%{background:var(--ink);color:var(--paper);transform:translate(-50%,-50%)}
+  100%{background:none;color:var(--g45);opacity:.6;transform:translate(-50%,-50%) scaleY(.94)}
+}
+@keyframes wipeMask{0%{opacity:0}30%{opacity:.9}100%{opacity:0}}
+
+/* ── いまのルール。卓の上に置くと席と重なるので、手前の帯に一列で ── */
+.rules-panel{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:22px}
+.rules-panel>b{
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--g45);font-weight:400;
+  display:flex;gap:6px;align-items:baseline;
+}
+.rules-panel>b i{font-style:normal;color:var(--ink)}
+#rules-list{display:flex;gap:6px;flex-wrap:wrap}
+#rules-list span{
+  display:flex;align-items:baseline;gap:6px;padding:3px 8px;border-left:3px solid var(--c,var(--ink));
+  background:color-mix(in srgb,var(--c,var(--ink)) 11%,var(--paper));
+}
+#rules-list b{font-size:11px;font-weight:400;line-height:1.35}
+#rules-list i{font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--g45)}
+
+/* ── ショウダウン。場札は隠さない。席の手札が一斉に開く ─────── */
+body[data-showdown] .h-seat.showing,body[data-showdown] .active-pod.revealing{z-index:30}
+body[data-showdown] .h-seat.showing .tiny-cards .card{
+  width:44px;height:62px;animation:sdFlip .34s steps(4,end) both;
+}
+body[data-showdown] .h-seat.showing .tiny-cards .card .pip{font-size:20px}
+body[data-showdown] .h-seat.showing .tiny-cards .card .corner{font-size:10px}
+body[data-showdown] .h-seat.folded{opacity:.28}
+body[data-showdown] .h-seat .tiny-cards,body[data-showdown] .h-seat .seat-mods{display:flex!important}
+@keyframes sdFlip{0%{transform:scaleX(.04)}55%{transform:scaleX(1.16)}100%{transform:none}}
+.seat-rank{
+  display:none;justify-self:center;font:600 13px/1 var(--sans);letter-spacing:-.02em;
+  padding:3px 8px 4px;background:var(--ink);color:var(--paper);
+}
+body[data-showdown] .h-seat.showing .seat-rank{display:block;animation:sdIn .3s steps(3,end) .22s both}
+@keyframes sdIn{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:none}}
+body[data-showdown] .h-seat.won .seat-rank{background:var(--c-attack);color:var(--c-attack-on)}
+
+/* 残り時間の点滅は結果画面のボタンにも */
+#round-time{font-family:var(--mono);font-size:11px;margin-left:8px;opacity:.75}
+#round-time[data-low="true"]{color:var(--c-attack);opacity:1;animation:lowBlink .5s steps(2,end) infinite}
+
+/* 卓が低いときは、実測に合わせて詰める（dvh の報告が当てにならない機がある） */
+.table-field[data-compact="true"] .h-seat{gap:2px;padding:6px 8px 7px;width:124px}
+.table-field[data-compact="true"] .h-seat .tiny-cards,
+.table-field[data-compact="true"] .h-seat .seat-mods{display:none}
+.table-field[data-compact="true"] .seat-bank strong{font-size:17px}
+.table-field[data-compact="true"] .seat-bank .hp{height:6px}
+.table-field[data-compact="true"] .holdem-center{grid-auto-flow:column;align-items:center;gap:18px;top:70%}
+.table-field[data-compact="true"] .action-pop{bottom:4px}
+.table-field[data-compact="true"] .pot-box{justify-items:start;text-align:left}
+.table-field[data-compact="true"] .pot-box strong{font-size:34px}
+.table-field[data-compact="true"] .board-cards .card{width:42px;height:59px}
+.table-field[data-compact="true"] .rail-line{inset:22px 40px}
+
+/* ── 書き換えられた札。黙って別物になっていると気づけない ───── */
+.card.changed{animation:cardChange .52s steps(5,end) both;z-index:2}
+@keyframes cardChange{
+  0%{transform:scaleX(.06);background:var(--c-attack);border-color:var(--c-attack)}
+  26%{transform:scaleX(1.14);background:var(--c-attack);border-color:var(--c-attack)}
+  48%{transform:none;background:var(--c-attack);border-color:var(--c-attack)}
+  72%{background:var(--c-attack);border-color:var(--ink)}
+  100%{transform:none;background:var(--card);border-color:var(--ink)}
+}
+/* 書き換わっている間は柄と数字を地の色で抜く */
+.card.changed .suit{fill:var(--c-attack-on)}
+.card.changed .corner b{color:var(--c-attack-on)}
+@keyframes cardChangeInk{0%,72%{color:var(--c-attack-on)}100%{color:inherit}}
+.card.changed .corner b,.card.changed .pip{animation:cardChangeInk .52s steps(5,end) both}
+
+/* 最後の1枚は強く着地させる */
+.board-cards .card.river{animation:riverLand .42s steps(4,end) both}
+@keyframes riverLand{
+  0%{opacity:0;transform:translateY(-22px) scale(1.3)}
+  40%{opacity:1;transform:translateY(0) scale(1.12)}
+  70%{transform:scale(.97)}
+  100%{transform:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .card.changed,.board-cards .card.river{animation:none!important}
+}
+
+/* ── 最後の1枚を待つ間 ─────────────────────────────── */
+.card-slot.waiting{
+  border-style:solid;border-color:var(--c-attack);
+  animation:riverWait .3s steps(2,end) infinite;
+}
+@keyframes riverWait{50%{background:var(--hot-soft)}}
+
+/* ── 負けにも一拍 ─────────────────────────────────── */
+.h-seat.lostbeat,.active-pod.lostbeat{animation:lostBeat .9s steps(4,end) both}
+@keyframes lostBeat{
+  0%{background:var(--ink);color:var(--paper)}
+  30%{background:var(--ink);color:var(--paper)}
+  100%{background:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .card-slot.waiting,.h-seat.lostbeat,.active-pod.lostbeat{animation:none!important}
+  body[data-showdown] .h-seat.showing .tiny-cards .card,body[data-showdown] .h-seat.showing .seat-rank{animation:none}
+}
+
+/* ============================================================
+   縦持ちの端末。卓を楕円に並べる作りは横幅がないと成立しないので、
+   ここだけは組み方そのものを変える —— 席は上に畳んだ一覧、
+   場札とポットは中央、操作盤は親指の届く下端に固定する。
+   ============================================================ */
+@media (max-width:600px){
+  .console{padding:0 12px;min-height:0;grid-template-rows:44px minmax(0,1fr) 20px}
+  .console>header{gap:10px;grid-template-columns:auto 1fr auto}
+  .logo{font-size:15px}
+  /* 段の名前は札の枚数だけ残す。PRE/FLOP の欧文は幅を食うだけ */
+  /* 幅が無いので欧文の段名は落とし、枚数だけ残す。読む側に要るのは枚数のほう */
+  /* 段の見出しは卓の帯（「最後の場札」など）が言うので、ヘッダからは落とす。
+     幅を分け合うと回戦数と残り人数が先に潰れる */
+  .street-nav{display:none}
+  .header-tools{gap:8px;flex-wrap:nowrap;overflow:hidden}
+  .meter{gap:4px;white-space:nowrap}
+  .meter i{white-space:nowrap}
+  .meter b{font-size:13px}
+  .floor-track,#scrap-box{display:none}
+
+  .game{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;column-gap:0}
+  .side-rail{display:none}
+
+  /* 卓の面。楕円をやめ、席を2列に畳む */
+  .table-field{overflow:hidden;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);gap:4px;padding-top:4px}
+  .rail{display:none}
+  .seats{position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;align-content:start}
+  /* 席は名前・チップ・直近の行動だけまで削る。伏せ札はショウダウンでだけ開く */
+  .h-seat{position:static;transform:none;width:auto;min-width:0;padding:4px 6px 5px;gap:1px}
+  .h-seat header{min-width:0}
+  .h-seat .tiny-cards,.h-seat .seat-mods{display:none}
+  .h-seat header b{font-size:11px}
+  .h-seat header span i{font-size:8px}
+  .seat-bank{gap:3px}
+  .seat-bank strong{font-size:14px}
+  .seat-bank .hp{height:5px}
+  .h-seat>small{font-size:9px}
+  .seat-bet{position:static;margin-top:1px}
+  .status-strip i{font-size:8px;padding:0 3px 1px}
+  /* 捲るときも列は増やさない。増やすと席が縦に伸びて卓から溢れる */
+  body[data-showdown] .h-seat.showing .tiny-cards{display:flex!important;justify-content:center}
+  body[data-showdown] .h-seat.showing .tiny-cards .card{width:22px;height:31px;min-width:0}
+  body[data-showdown] .h-seat.showing .tiny-cards .card .pip{font-size:11px}
+  body[data-showdown] .h-seat.showing .seat-rank{font-size:10px;padding:1px 4px 2px;justify-self:stretch;text-align:center}
+  body[data-showdown] .h-seat.folded{display:none}
+
+  .holdem-center{
+    position:static;transform:none;top:auto;left:auto;
+    align-self:center;justify-self:center;justify-items:center;gap:4px;
+  }
+  .pot-box strong{font-size:clamp(28px,10vw,40px)}
+  .pot-box span{font-size:9px}
+  .board-cards{gap:3px}
+  .board-cards .card{width:clamp(34px,10vw,44px);height:auto;aspect-ratio:5/7}
+  /* 行動の札は席の上に置かない。卓の面の下端へ寄せる */
+  .action-pop{position:absolute;left:50%;bottom:2px;transform:translateX(-50%);padding:4px 9px 5px}
+
+  /* 自分の帯。手札・数字・操作の3段に畳む */
+  .active-pod{gap:6px;padding:8px 0 10px}
+  .hole-wrap{gap:12px;align-items:center}
+  .hand.hole .card{width:44px;height:63px}
+  .decision b{font-size:18px}
+  .active-meta{display:none}
+  .stack-strip{overflow-x:auto;scrollbar-width:none}
+  .stack-strip::-webkit-scrollbar{display:none}
+  .stack-strip>div{padding:6px 12px;flex:0 0 auto}
+  .stack-strip strong,.stack-strip b{font-size:17px}
+  .scout,.rules-panel{max-height:56px;overflow-y:auto}
+  .bet-controls{position:sticky;bottom:0;background:var(--paper)}
+  .bet-controls button{padding:11px 2px;font-size:11px;white-space:nowrap;letter-spacing:0}
+  .raise-control{padding:0 6px}
+  .raise-control b{font-size:16px}
+
+  /* 板もの。画面いっぱいに開いて、中だけを送る */
+  .modal{width:calc(100% - 16px);max-height:92%;padding:18px 14px 16px}
+  .setup h1{font-size:40px;letter-spacing:-.045em}
+  .modal h2{font-size:22px}
+  .setup-grid{gap:12px;margin:16px 0 12px}
+  .setup-grid label{width:100%}
+  .setup-grid select{width:100%}
+  .spec-list div{gap:10px;font-size:12px}
+  .spec-list b{text-align:right}
+  .chaos-head{grid-template-columns:1fr auto;gap:10px}
+  .chaos-head h2{font-size:20px}
+  .chaos-head>b{font-size:26px}
+  .round-players article{grid-template-columns:1fr auto;gap:8px}
+  .round-players .result-hand{grid-column:1/-1}
+  .standings li{grid-template-columns:24px 1fr auto;gap:8px}
+  .standings i{display:none}
+  .manual-grid p{grid-template-columns:1fr;gap:4px}
+  #room-code,.link-step textarea{width:100%}
+  .stamp{font-size:min(34px,9vw)}
+  .stamp.big{font-size:min(42px,11vw)}
+  .stamp.huge{font-size:min(52px,13vw)}
+}
